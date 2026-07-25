@@ -1,0 +1,6 @@
+{
+  "name": "SakuDigital - Alat Administrasi & UMKM Instan Gratis",
+  "description": "SakuDigital adalah portal Offline Tools & Alat Administrasi Gratis terpercaya untuk UMKM Indonesia. Memproses data langsung di browser tanpa upload.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Base custom styles to enforce ultra-clear typography and eye-strain-free contrast */
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure form controls are 100% visible and have solid high contrast text colors */
+input, textarea, select {
+  font-family: var(--font-sans);
+  color: #0f172a !important; /* text-slate-900 */
+}
+
+/* Inside dark mode parent, force contrast and dark background so text never blends */
+.dark input, 
+.dark textarea, 
+.dark select {
+  color: #f8fafc !important; /* text-slate-50 */
+  background-color: #0f172a !important; /* bg-slate-900 */
+  border-color: #334155 !important; /* border-slate-700 */
+}
+
+/* Handle placeholders to be sufficiently visible yet distinctive */
+input::placeholder, 
+textarea::placeholder {
+  color: #94a3b8 !important; /* slate-400 */
+}
+.dark input::placeholder, 
+.dark textarea::placeholder {
+  color: #64748b !important; /* slate-500 */
+}
+
+/* Ensure focused fields have clear ring visibility */
+input:focus, 
+textarea:focus, 
+select:focus {
+  outline: 2px solid #10b981 !important; /* emerald-500 */
+}
