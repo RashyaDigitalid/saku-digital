@@ -122,10 +122,10 @@ export default function ToolWrapper({ tool, reverseTool, onToggleReverse }: Tool
       )}
 
       {/* CORE ACTIVE TOOL SCREEN */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">{tool.name}</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tool.description}</p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-sm overflow-hidden">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-xl font-black text-slate-900 dark:text-slate-100 break-words">{tool.name}</h2>
+          <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{tool.description}</p>
         </div>
         
         {renderToolBody()}

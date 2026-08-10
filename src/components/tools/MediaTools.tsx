@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Scissors, Image as ImageIcon, Grid, Minimize, Layers, Plus, Trash2, Download, AlertCircle, FileText, FileImage, ShieldCheck, Clapperboard, Play, Pause, Upload, Sparkles, RefreshCw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import CopyButton from '../CopyButton';
+import VideoSubtitleStudio from './VideoSubtitleStudio';
 
 interface MediaToolsProps {
   toolId: string;
@@ -1088,139 +1089,9 @@ export default function MediaTools({ toolId }: MediaToolsProps) {
         </div>
       )}
 
-      {/* 5. SUBTITLE GENERATOR */}
+      {/* 5. SUBTITLE GENERATOR (AI SPEECH-TO-TEXT & LIVE SYNC STUDIO) */}
       {toolId === 'subtitle-generator' && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-6 animate-fade-in">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700/60 pb-4">
-            <div>
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                <Clapperboard className="w-5 h-5 text-emerald-600" /> Pembuat & Editor Subtitle (SRT & VTT)
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">Edit dan buat berkas subtitle untuk video YouTube, TikTok, atau jualan secara offline.</p>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="px-3.5 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer border hover:bg-slate-200">
-                <Upload className="w-4 h-4" /> Import SRT/VTT
-                <input type="file" accept=".srt,.vtt,.txt" className="hidden" onChange={handleImportSubtitle} />
-              </label>
-
-              <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl">
-                <button 
-                  onClick={() => setSubFormat('srt')}
-                  className={`px-3 py-1 rounded-lg text-3xs font-extrabold uppercase transition-all ${subFormat === 'srt' ? 'bg-emerald-600 text-white shadow' : 'text-slate-600 dark:text-slate-300'}`}
-                >
-                  SRT
-                </button>
-                <button 
-                  onClick={() => setSubFormat('vtt')}
-                  className={`px-3 py-1 rounded-lg text-3xs font-extrabold uppercase transition-all ${subFormat === 'vtt' ? 'bg-emerald-600 text-white shadow' : 'text-slate-600 dark:text-slate-300'}`}
-                >
-                  WebVTT
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* SUBTITLE EDITOR LIST */}
-            <div className="lg:col-span-2 space-y-4">
-              <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Baris Subtitle ({sublines.length})</span>
-              
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                {sublines.map((line, idx) => (
-                  <div key={line.id} className="p-3 bg-slate-50 dark:bg-slate-900/40 border dark:border-slate-800 rounded-xl space-y-2 flex flex-col relative group">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="w-5 h-5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-full flex items-center justify-center text-3xs font-extrabold shrink-0">
-                        {idx + 1}
-                      </span>
-                      
-                      <div className="flex items-center gap-1.5 text-3xs text-slate-500 dark:text-slate-400">
-                        <span className="font-bold">Mulai:</span>
-                        <input 
-                          type="text" 
-                          value={line.start}
-                          onChange={(e) => handleUpdateSubline(line.id, 'start', e.target.value)}
-                          className="px-2 py-1 bg-white dark:bg-slate-800 border rounded outline-none w-24 font-mono text-center"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-3xs text-slate-500 dark:text-slate-400">
-                        <span className="font-bold">Selesai:</span>
-                        <input 
-                          type="text" 
-                          value={line.end}
-                          onChange={(e) => handleUpdateSubline(line.id, 'end', e.target.value)}
-                          className="px-2 py-1 bg-white dark:bg-slate-800 border rounded outline-none w-24 font-mono text-center"
-                        />
-                      </div>
-
-                      <button 
-                        onClick={() => handleDeleteSubline(line.id)}
-                        className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-600 rounded-lg ml-auto transition-colors"
-                        title="Hapus baris ini"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <input 
-                      type="text" 
-                      value={line.text}
-                      onChange={(e) => handleUpdateSubline(line.id, 'text', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700/80 rounded-xl text-xs outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Masukkan percakapan / teks subtitle di sini..."
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <button 
-                  onClick={handleAddSubline}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> Tambah Baris Baru
-                </button>
-                
-                <div className="flex flex-wrap gap-2 ml-auto">
-                  <CopyButton
-                    textToCopy={sublines.map((line, idx) => `${idx + 1}\n${line.start} --> ${line.end}\n${line.text}`).join('\n\n')}
-                    label="Salin Teks Subtitle"
-                    size="sm"
-                    variant="secondary"
-                  />
-                  <button 
-                    onClick={handleDownloadSubtitle}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" /> Download Subtitle (.{(subFormat)})
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* PREVIEW & GUIDELINES SIDEBAR */}
-            <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border dark:border-slate-800 space-y-4">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Panduan Format Subtitle</span>
-              
-              <div className="space-y-3 text-3xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                <p>Format waktu wajib menggunakan pola jam, menit, detik, dan milidetik:</p>
-                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border font-mono">
-                  srt: 00:00:02,500<br />
-                  vtt: 00:00:02.500
-                </div>
-                <p><strong>Tips Penyelarasan Waktu:</strong> Anda bisa memutar video Anda di media player HP, pause pada detik suara terdengar, lalu tuliskan angkanya di kolom mulai di atas.</p>
-                <p><strong>Bebas Hambatan:</strong> File subtitle yang diunduh langsung dapat dimasukkan ke dalam pemutar video seperti VLC Player atau diunggah ke TikTok/YouTube untuk memunculkan teks otomatis!</p>
-              </div>
-
-              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 p-4 rounded-xl text-3xs text-emerald-700 dark:text-emerald-400 space-y-1">
-                <p className="font-bold">100% Client-Side Processing</p>
-                <p className="leading-normal">Tidak ada file video atau naskah Anda yang diunggah ke internet. Semua penulisan dan konversi diselesaikan secara instan di browser Anda.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <VideoSubtitleStudio />
       )}
 
       {/* 6. REMOVE BACKGROUND */}

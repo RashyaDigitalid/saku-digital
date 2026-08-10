@@ -131,10 +131,10 @@ export const TOOLS: Tool[] = [
   },
   {
     id: 'subtitle-generator',
-    name: 'Pembuat & Editor Subtitle (SRT/WebVTT)',
+    name: 'Subtitle Video AI Otomatis & Transkrip Suara (SRT/VTT)',
     category: 'media',
-    description: 'Tulis, edit, selaraskan timestamp, dan buat file teks subtitle video (.srt / .vtt) secara instan.',
-    badge: '🎬 Video Pro',
+    description: 'Unggah video asli: sistem mendengarkan suara & mendeteksi percakapan otomatis (Speech-to-Text), live subtitle sync gaya TikTok/CapCut, dan ekspor SRT/VTT.',
+    badge: '🎬 AI Voice Pro',
     iconName: 'Clapperboard',
   },
   {

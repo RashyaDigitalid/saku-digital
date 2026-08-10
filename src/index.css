@@ -7,9 +7,27 @@
 }
 
 /* Base custom styles to enforce ultra-clear typography and eye-strain-free contrast */
-body {
+html, body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+/* Ensure images, canvases, and media never blow past screen width on mobile */
+img, canvas, video, svg {
+  max-width: 100%;
+}
+
+/* Custom scrollbar hiding utility for horizontal mobile pill selectors */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Ensure form controls are 100% visible and have solid high contrast text colors */
