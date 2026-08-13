@@ -6,7 +6,7 @@
   
   <!-- Halaman Utama -->
   <url>
-    <loc>https://alatajaib.com/</loc>
+    <loc>https://alatajaib.vercel.app/</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -14,25 +14,25 @@
 
   <!-- Kategori Utama -->
   <url>
-    <loc>https://alatajaib.com/?category=media</loc>
+    <loc>https://alatajaib.vercel.app/?category=media</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?category=admin</loc>
+    <loc>https://alatajaib.vercel.app/?category=admin</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?category=bisnis</loc>
+    <loc>https://alatajaib.vercel.app/?category=bisnis</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?category=sosial</loc>
+    <loc>https://alatajaib.vercel.app/?category=sosial</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -40,85 +40,85 @@
 
   <!-- KOLEKSI ALAT MEDIA & GAMBAR -->
   <url>
-    <loc>https://alatajaib.com/?tool=watermark-ktp</loc>
+    <loc>https://alatajaib.vercel.app/?tool=watermark-ktp</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=redaktur-ktp</loc>
+    <loc>https://alatajaib.vercel.app/?tool=redaktur-ktp</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=word-to-jpg</loc>
+    <loc>https://alatajaib.vercel.app/?tool=word-to-jpg</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=image-to-word</loc>
+    <loc>https://alatajaib.vercel.app/?tool=image-to-word</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=kompres-video</loc>
+    <loc>https://alatajaib.vercel.app/?tool=kompres-video</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=video-splitter</loc>
+    <loc>https://alatajaib.vercel.app/?tool=video-splitter</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=pasfoto-cpns</loc>
+    <loc>https://alatajaib.vercel.app/?tool=pasfoto-cpns</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=pasfoto-grid</loc>
+    <loc>https://alatajaib.vercel.app/?tool=pasfoto-grid</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=konversi-webp</loc>
+    <loc>https://alatajaib.vercel.app/?tool=konversi-webp</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=bulk-compress-image</loc>
+    <loc>https://alatajaib.vercel.app/?tool=bulk-compress-image</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=watermark-massal</loc>
+    <loc>https://alatajaib.vercel.app/?tool=watermark-massal</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=exif-cleaner</loc>
+    <loc>https://alatajaib.vercel.app/?tool=exif-cleaner</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=subtitle-generator</loc>
+    <loc>https://alatajaib.vercel.app/?tool=subtitle-generator</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=remove-bg</loc>
+    <loc>https://alatajaib.vercel.app/?tool=remove-bg</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -126,103 +126,103 @@
 
   <!-- KOLEKSI ALAT ADMINISTRASI & DOKUMEN -->
   <url>
-    <loc>https://alatajaib.com/?tool=kompres-pdf</loc>
+    <loc>https://alatajaib.vercel.app/?tool=kompres-pdf</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=pdf-merger</loc>
+    <loc>https://alatajaib.vercel.app/?tool=pdf-merger</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=pdf-to-jpg</loc>
+    <loc>https://alatajaib.vercel.app/?tool=pdf-to-jpg</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=jpg-to-pdf</loc>
+    <loc>https://alatajaib.vercel.app/?tool=jpg-to-pdf</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=ekstrak-pdf</loc>
+    <loc>https://alatajaib.vercel.app/?tool=ekstrak-pdf</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=text-to-pdf</loc>
+    <loc>https://alatajaib.vercel.app/?tool=text-to-pdf</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=generator-surat</loc>
+    <loc>https://alatajaib.vercel.app/?tool=generator-surat</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=digital-signature</loc>
+    <loc>https://alatajaib.vercel.app/?tool=digital-signature</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=label-103</loc>
+    <loc>https://alatajaib.vercel.app/?tool=label-103</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=label-121</loc>
+    <loc>https://alatajaib.vercel.app/?tool=label-121</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=pemecah-nip</loc>
+    <loc>https://alatajaib.vercel.app/?tool=pemecah-nip</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=nip-generator</loc>
+    <loc>https://alatajaib.vercel.app/?tool=nip-generator</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=ocr-scan</loc>
+    <loc>https://alatajaib.vercel.app/?tool=ocr-scan</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=text-to-speech</loc>
+    <loc>https://alatajaib.vercel.app/?tool=text-to-speech</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=hitung-umur</loc>
+    <loc>https://alatajaib.vercel.app/?tool=hitung-umur</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=pensiun-countdown</loc>
+    <loc>https://alatajaib.vercel.app/?tool=pensiun-countdown</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=word-counter</loc>
+    <loc>https://alatajaib.vercel.app/?tool=word-counter</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -230,49 +230,49 @@
 
   <!-- KOLEKSI ALAT BISNIS & KEUANGAN -->
   <url>
-    <loc>https://alatajaib.com/?tool=potongan-admin</loc>
+    <loc>https://alatajaib.vercel.app/?tool=potongan-admin</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=target-pricing</loc>
+    <loc>https://alatajaib.vercel.app/?tool=target-pricing</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=kalkulator-hpp</loc>
+    <loc>https://alatajaib.vercel.app/?tool=kalkulator-hpp</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=bep-calculator</loc>
+    <loc>https://alatajaib.vercel.app/?tool=bep-calculator</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=qr-tool</loc>
+    <loc>https://alatajaib.vercel.app/?tool=qr-tool</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=barcode-tool</loc>
+    <loc>https://alatajaib.vercel.app/?tool=barcode-tool</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=link-bio</loc>
+    <loc>https://alatajaib.vercel.app/?tool=link-bio</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=nota-extractor</loc>
+    <loc>https://alatajaib.vercel.app/?tool=nota-extractor</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -280,37 +280,37 @@
 
   <!-- KOLEKSI ALAT SOSIAL & LOKAL -->
   <url>
-    <loc>https://alatajaib.com/?tool=jadwal-sholat</loc>
+    <loc>https://alatajaib.vercel.app/?tool=jadwal-sholat</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=qibla-compass</loc>
+    <loc>https://alatajaib.vercel.app/?tool=qibla-compass</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=font-aesthetic</loc>
+    <loc>https://alatajaib.vercel.app/?tool=font-aesthetic</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=font-normalizer</loc>
+    <loc>https://alatajaib.vercel.app/?tool=font-normalizer</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=selamatan-jawa</loc>
+    <loc>https://alatajaib.vercel.app/?tool=selamatan-jawa</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alatajaib.com/?tool=text-repeater</loc>
+    <loc>https://alatajaib.vercel.app/?tool=text-repeater</loc>
     <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
