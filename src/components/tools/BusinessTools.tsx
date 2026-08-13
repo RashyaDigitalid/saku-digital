@@ -792,38 +792,134 @@ Terima Kasih Atas Kunjungan Anda!
     triggerSuccess();
   };
 
-  // 1. COMMISSION CALCULATORS
-  const [sellPrice, setSellPrice] = useState(150000);
+  // 1. COMMISSION CALCULATORS (UPDATED FORMULA BASED ON SPREADSHEET REFERENCE)
   const [platform, setPlatform] = useState<'shopee' | 'tokopedia' | 'tiktok' | 'lazada'>('shopee');
-  const [adminPercent, setAdminPercent] = useState(6.0); // Standard commission rate %
-  const [comResults, setComResults] = useState<{ potongan: number; bersih: number } | null>({ potongan: 9000, bersih: 141000 });
+  const [biayaAdminPercent, setBiayaAdminPercent] = useState<number>(8.25);
+  const [gratisOngkirPercent, setGratisOngkirPercent] = useState<number>(7.50);
+  const [useGratisOngkir, setUseGratisOngkir] = useState<boolean>(true);
+  const [layananPromoPercent, setLayananPromoPercent] = useState<number>(6.50);
+  const [useLayananPromo, setUseLayananPromo] = useState<boolean>(true);
+  const [biayaProsesFlat, setBiayaProsesFlat] = useState<number>(1250);
+
+  // Total Persentase Potongan (%)
+  const totalPersentasePotongan = Number(
+    (
+      biayaAdminPercent +
+      (useGratisOngkir ? gratisOngkirPercent : 0) +
+      (useLayananPromo ? layananPromoPercent : 0)
+    ).toFixed(2)
+  );
+
+  // Potongan Admin (Harga Jual -> Payout)
+  const [sellPrice, setSellPrice] = useState<number>(28000);
+  const [comResults, setComResults] = useState<{
+    biayaAdminRp: number;
+    biayaGratisOngkirRp: number;
+    biayaLayananPromoRp: number;
+    totalPotonganPersentaseRp: number;
+    biayaProsesFlatRp: number;
+    totalSeluruhBiayaAdmin: number;
+    penghasilanAkhir: number;
+  } | null>({
+    biayaAdminRp: 2310,
+    biayaGratisOngkirRp: 2100,
+    biayaLayananPromoRp: 1820,
+    totalPotonganPersentaseRp: 6230,
+    biayaProsesFlatRp: 1250,
+    totalSeluruhBiayaAdmin: 7480,
+    penghasilanAkhir: 20520,
+  });
 
   const handleCalculateCommission = () => {
-    const pot = (sellPrice * adminPercent) / 100;
-    const ber = sellPrice - pot;
-    setComResults({ potongan: pot, bersih: ber });
+    const adminRp = (sellPrice * biayaAdminPercent) / 100;
+    const ongkirRp = useGratisOngkir ? (sellPrice * gratisOngkirPercent) / 100 : 0;
+    const promoRp = useLayananPromo ? (sellPrice * layananPromoPercent) / 100 : 0;
+    const totalPctRp = adminRp + ongkirRp + promoRp;
+    const totalAdmin = totalPctRp + biayaProsesFlat;
+    const akhir = sellPrice - totalAdmin;
+
+    setComResults({
+      biayaAdminRp: Math.round(adminRp),
+      biayaGratisOngkirRp: Math.round(ongkirRp),
+      biayaLayananPromoRp: Math.round(promoRp),
+      totalPotonganPersentaseRp: Math.round(totalPctRp),
+      biayaProsesFlatRp: biayaProsesFlat,
+      totalSeluruhBiayaAdmin: Math.round(totalAdmin),
+      penghasilanAkhir: Math.round(akhir)
+    });
     triggerSuccess();
   };
 
-  // Reverse Commission: Target Price
-  const [cogInput, setCogInput] = useState(80000); // Cost of goods / Modal
-  const [targetProfit, setTargetProfit] = useState(30000); // Desired profit margin
-  const [targetPriceResult, setTargetPriceResult] = useState<number | null>(null);
+  // Target Pricing (Modal + Margin -> Harga Jual Pasang)
+  const [cogInput, setCogInput] = useState<number>(20000); // Harga Modal
+  const [targetMarginPercent, setTargetMarginPercent] = useState<number>(10.0); // Target Margin %
+  const [targetPriceResult, setTargetPriceResult] = useState<{
+    targetLaba: number;
+    targetDiterima: number;
+    pembilang: number;
+    penyebutPct: number;
+    hasilHargaJual: number;
+  } | null>({
+    targetLaba: 2000,
+    targetDiterima: 22000,
+    pembilang: 23250,
+    penyebutPct: 77.75,
+    hasilHargaJual: 29904
+  });
 
   const handleCalculateTargetPrice = () => {
-    // Math logic: (COG + Desired Profit) / (1 - Admin %)
-    const rate = adminPercent / 100;
-    const target = (cogInput + targetProfit) / (1 - rate);
-    setTargetPriceResult(Math.round(target));
+    const targetLaba = (cogInput * targetMarginPercent) / 100;
+    const targetDiterima = cogInput + targetLaba; // Modal + Margin
+    const pembilang = targetDiterima + biayaProsesFlat;
+    const penyebutPct = 100 - totalPersentasePotongan;
+    const penyebut = penyebutPct / 100;
+    
+    let hasil = 0;
+    if (penyebut > 0) {
+      hasil = Math.round(pembilang / penyebut);
+    }
+
+    setTargetPriceResult({
+      targetLaba: Math.round(targetLaba),
+      targetDiterima: Math.round(targetDiterima),
+      pembilang: Math.round(pembilang),
+      penyebutPct: Number(penyebutPct.toFixed(2)),
+      hasilHargaJual: hasil
+    });
     triggerSuccess();
   };
 
-  // Update percentages based on preset
+  // Presets based on platform
   useEffect(() => {
-    if (platform === 'shopee') setAdminPercent(6.0);
-    else if (platform === 'tokopedia') setAdminPercent(5.5);
-    else if (platform === 'tiktok') setAdminPercent(5.0);
-    else if (platform === 'lazada') setAdminPercent(4.5);
+    if (platform === 'shopee') {
+      setBiayaAdminPercent(8.25);
+      setGratisOngkirPercent(7.50);
+      setLayananPromoPercent(6.50);
+      setBiayaProsesFlat(1250);
+      setUseGratisOngkir(true);
+      setUseLayananPromo(true);
+    } else if (platform === 'tokopedia') {
+      setBiayaAdminPercent(6.50);
+      setGratisOngkirPercent(4.50);
+      setLayananPromoPercent(0);
+      setBiayaProsesFlat(1000);
+      setUseGratisOngkir(true);
+      setUseLayananPromo(false);
+    } else if (platform === 'tiktok') {
+      setBiayaAdminPercent(6.00);
+      setGratisOngkirPercent(5.00);
+      setLayananPromoPercent(0);
+      setBiayaProsesFlat(1000);
+      setUseGratisOngkir(true);
+      setUseLayananPromo(false);
+    } else if (platform === 'lazada') {
+      setBiayaAdminPercent(5.00);
+      setGratisOngkirPercent(4.00);
+      setLayananPromoPercent(0);
+      setBiayaProsesFlat(1000);
+      setUseGratisOngkir(true);
+      setUseLayananPromo(false);
+    }
   }, [platform]);
 
   // 2. HPP & BEP CALCULATORS
@@ -988,22 +1084,32 @@ Terima Kasih Atas Kunjungan Anda!
       {toolId === 'potongan-admin' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-4">
-              <span className="font-bold text-slate-800 dark:text-slate-200">Hitung Potongan Admin Toko</span>
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-5 rounded-2xl shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2.5">
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Kalkulator Potongan Shopee / Toko</span>
+                <span className="text-xs font-bold px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 rounded-lg">
+                  Total Admin: {totalPersentasePotongan}%
+                </span>
+              </div>
               
+              {/* PLATFORM SELECTOR */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">PILIH PLATFORM MARKETPLACE</label>
+                <label className="text-xs font-bold text-slate-500 uppercase">Pilih Platform Preset</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'shopee', label: 'Shopee (6.0%)' },
-                    { id: 'tokopedia', label: 'Tokopedia (5.5%)' },
-                    { id: 'tiktok', label: 'TikTok (5.0%)' },
-                    { id: 'lazada', label: 'Lazada (4.5%)' },
+                    { id: 'shopee', label: 'Shopee (22.25%)' },
+                    { id: 'tokopedia', label: 'Tokopedia (11.0%)' },
+                    { id: 'tiktok', label: 'TikTok Shop (11.0%)' },
+                    { id: 'lazada', label: 'Lazada (9.0%)' },
                   ].map((plat) => (
                     <button 
                       key={plat.id}
                       onClick={() => setPlatform(plat.id as any)}
-                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${platform === plat.id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}
+                      className={`py-2 text-2xs font-bold rounded-xl border transition-all cursor-pointer ${
+                        platform === plat.id 
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' 
+                          : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                      }`}
                     >
                       {plat.label}
                     </button>
@@ -1011,56 +1117,156 @@ Terima Kasih Atas Kunjungan Anda!
                 </div>
               </div>
 
+              {/* INPUT HARGA JUAL */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">HARGA JUAL PRODUK DI TOKO (RP)</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase block">
+                  HARGA JUAL PRODUK DI TOKO (RP)
+                </label>
                 <input 
                   type="number" 
                   value={sellPrice} 
                   onChange={(e) => setSellPrice(Number(e.target.value))}
-                  className="w-full text-sm px-3 py-2 border rounded-xl dark:bg-slate-900 font-bold" 
+                  placeholder="28000"
+                  className="w-full text-base px-3.5 py-2.5 bg-white text-slate-900 border-2 border-slate-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" 
                 />
               </div>
 
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-bold text-slate-500">
-                  <span>PERSENTASE ADMIN (%)</span>
-                  <span>{adminPercent}%</span>
+              {/* PARAMETER POTONGAN */}
+              <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
+                <span className="font-bold text-slate-700 dark:text-slate-300 block border-b border-slate-200 dark:border-slate-800 pb-1">
+                  Parameter Persentase Potongan
+                </span>
+
+                <div className="grid grid-cols-2 items-center gap-2">
+                  <label className="text-slate-600 dark:text-slate-400 font-medium">Biaya Administrasi (%):</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={biayaAdminPercent} 
+                    onChange={(e) => setBiayaAdminPercent(parseFloat(e.target.value) || 0)}
+                    className="w-full px-2 py-1 bg-white text-slate-900 border border-slate-300 rounded font-bold text-right"
+                  />
                 </div>
-                <input type="range" min="1" max="15" step="0.5" value={adminPercent} onChange={(e) => setAdminPercent(parseFloat(e.target.value))} className="w-full accent-blue-600" />
+
+                <div className="grid grid-cols-2 items-center gap-2">
+                  <label className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5">
+                    <input 
+                      type="checkbox" 
+                      checked={useGratisOngkir} 
+                      onChange={(e) => setUseGratisOngkir(e.target.checked)}
+                      className="accent-emerald-600 rounded"
+                    />
+                    <span>Gratis Ongkir XTRA (%):</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    disabled={!useGratisOngkir}
+                    value={gratisOngkirPercent} 
+                    onChange={(e) => setGratisOngkirPercent(parseFloat(e.target.value) || 0)}
+                    className="w-full px-2 py-1 bg-white text-slate-900 border border-slate-300 rounded font-bold text-right disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 items-center gap-2">
+                  <label className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5">
+                    <input 
+                      type="checkbox" 
+                      checked={useLayananPromo} 
+                      onChange={(e) => setUseLayananPromo(e.target.checked)}
+                      className="accent-emerald-600 rounded"
+                    />
+                    <span>Promo XTRA+ (%):</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    disabled={!useLayananPromo}
+                    value={layananPromoPercent} 
+                    onChange={(e) => setLayananPromoPercent(parseFloat(e.target.value) || 0)}
+                    className="w-full px-2 py-1 bg-white text-slate-900 border border-slate-300 rounded font-bold text-right disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+                  <label className="text-slate-600 dark:text-slate-400 font-medium">Biaya Proses Pesanan (Rp):</label>
+                  <input 
+                    type="number" 
+                    value={biayaProsesFlat} 
+                    onChange={(e) => setBiayaProsesFlat(parseInt(e.target.value) || 0)}
+                    className="w-full px-2 py-1 bg-white text-slate-900 border border-slate-300 rounded font-bold text-right"
+                  />
+                </div>
               </div>
 
               <button 
                 onClick={handleCalculateCommission}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1 shadow"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-98"
               >
-                <Calculator className="w-4 h-4" /> Hitung Payout Bersih
+                <Calculator className="w-4 h-4" /> Hitung Potongan & Payout Akhir
               </button>
             </div>
           </div>
 
-          <div className="lg:col-span-7 bg-slate-900 p-6 rounded-3xl border shadow-inner flex flex-col justify-center min-h-[300px]">
+          {/* RESULT BOARD */}
+          <div className="lg:col-span-7 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-inner flex flex-col justify-center min-h-[300px]">
             {comResults ? (
-              <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl max-w-sm mx-auto w-full space-y-4 font-mono">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block text-center">RINCIAN POTONGAN TOKO:</span>
+              <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl max-w-md mx-auto w-full space-y-4 font-mono text-slate-200">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block text-center border-b border-slate-800 pb-2">
+                  RINCIAN POTONGAN SHOPEE / TOKO:
+                </span>
                 
-                <div className="space-y-2 border-b border-slate-800 pb-3 text-xs">
-                  <div className="flex justify-between text-slate-400">
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between text-slate-300">
                     <span>Harga Jual Toko:</span>
-                    <span className="font-bold text-slate-200">Rp {sellPrice.toLocaleString('id-ID')}</span>
+                    <span className="font-bold text-white">Rp {sellPrice.toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between text-rose-400">
-                    <span>Komisi Admin ({adminPercent}%):</span>
-                    <span className="font-bold">- Rp {comResults.potongan.toLocaleString('id-ID')}</span>
+                    <span>Biaya Administrasi ({biayaAdminPercent}%):</span>
+                    <span>- Rp {comResults.biayaAdminRp.toLocaleString('id-ID')}</span>
+                  </div>
+                  {useGratisOngkir && (
+                    <div className="flex justify-between text-rose-400">
+                      <span>Gratis Ongkir XTRA ({gratisOngkirPercent}%):</span>
+                      <span>- Rp {comResults.biayaGratisOngkirRp.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {useLayananPromo && (
+                    <div className="flex justify-between text-rose-400">
+                      <span>Promo XTRA+ ({layananPromoPercent}%):</span>
+                      <span>- Rp {comResults.biayaLayananPromoRp.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-rose-400 pt-1 border-t border-slate-850">
+                    <span>Biaya Proses Pesanan (Flat):</span>
+                    <span>- Rp {comResults.biayaProsesFlatRp.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between text-amber-400 font-bold pt-1.5 border-t border-slate-800">
+                    <span>Total Seluruh Biaya Admin:</span>
+                    <span>Rp {comResults.totalSeluruhBiayaAdmin.toLocaleString('id-ID')}</span>
                   </div>
                 </div>
 
-                <div className="text-center bg-slate-900 p-4 border border-slate-850 rounded-xl">
-                  <span className="text-3xs text-slate-500 block uppercase font-bold">Uang Bersih Yang Anda Terima (Payout):</span>
-                  <span className="text-xl font-bold text-emerald-400 block mt-1">Rp {comResults.bersih.toLocaleString('id-ID')}</span>
+                <div className="text-center bg-slate-900 p-4 border border-emerald-900/50 rounded-xl">
+                  <span className="text-3xs text-slate-400 block uppercase font-bold">Penghasilan Akhir Diterima (Payout):</span>
+                  <span className="text-2xl font-black text-emerald-400 block mt-1">
+                    Rp {comResults.penghasilanAkhir.toLocaleString('id-ID')}
+                  </span>
+                </div>
+
+                <div className="p-2.5 bg-slate-900/80 rounded-lg text-3xs text-slate-400 leading-relaxed space-y-1">
+                  <p className="font-bold text-slate-300">* Catatan Spreadsheet Rumus:</p>
+                  <p>• Persentase total ({totalPersentasePotongan}%) = Admin {biayaAdminPercent}% + Ongkir {useGratisOngkir ? gratisOngkirPercent : 0}% + Promo {useLayananPromo ? layananPromoPercent : 0}%.</p>
+                  <p>• Biaya proses pesanan (Rp {biayaProsesFlat.toLocaleString('id-ID')}) bersifat Flat (tetap) dan tidak dimasukkan ke persentase.</p>
                 </div>
 
                 <div className="flex justify-center pt-1">
-                  <CopyButton textToCopy={`Hasil Potongan Toko:\nHarga Jual: Rp ${sellPrice.toLocaleString('id-ID')}\nKomisi Admin (${adminPercent}%): Rp ${comResults.potongan.toLocaleString('id-ID')}\nPayout Bersih: Rp ${comResults.bersih.toLocaleString('id-ID')}`} label="Salin Hasil Rincian" size="sm" variant="secondary" />
+                  <CopyButton 
+                    textToCopy={`Rincian Potongan Shopee:\nHarga Jual: Rp ${sellPrice.toLocaleString('id-ID')}\nTotal Persentase (${totalPersentasePotongan}%): Rp ${comResults.totalPotonganPersentaseRp.toLocaleString('id-ID')}\nBiaya Proses Pesanan Flat: Rp ${comResults.biayaProsesFlatRp.toLocaleString('id-ID')}\nTotal Seluruh Biaya Admin: Rp ${comResults.totalSeluruhBiayaAdmin.toLocaleString('id-ID')}\nPenghasilan Akhir: Rp ${comResults.penghasilanAkhir.toLocaleString('id-ID')}`} 
+                    label="Salin Hasil Rincian" 
+                    size="sm" 
+                    variant="secondary" 
+                  />
                 </div>
               </div>
             ) : (
@@ -1074,51 +1280,101 @@ Terima Kasih Atas Kunjungan Anda!
       {toolId === 'target-pricing' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-3.5">
-              <span className="font-bold text-slate-800 dark:text-slate-200">Kalkulator Harga Jual Target Profit</span>
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-5 rounded-2xl shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2.5">
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Kalkulator Harga Jual Target Profit</span>
+                <span className="text-xs font-bold px-2.5 py-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 rounded-lg">
+                  Fee Admin: {totalPersentasePotongan}%
+                </span>
+              </div>
               
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">MODAL PRODUKSI / BARANG (RP)</label>
-                <input type="number" value={cogInput} onChange={(e) => setCogInput(Number(e.target.value))} className="w-full text-xs p-2 border rounded-xl dark:bg-slate-900 font-semibold" />
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase block">HARGA MODAL PRODUK (RP)</label>
+                <input 
+                  type="number" 
+                  value={cogInput} 
+                  onChange={(e) => setCogInput(Number(e.target.value))} 
+                  placeholder="20000"
+                  className="w-full text-sm px-3.5 py-2.5 bg-white text-slate-900 border-2 border-slate-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">TARGET PROFIT BERSIH DIINGINKAN (RP)</label>
-                <input type="number" value={targetProfit} onChange={(e) => setTargetProfit(Number(e.target.value))} className="w-full text-xs p-2 border rounded-xl dark:bg-slate-900 font-semibold" />
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase block">TARGET MARGIN DARI MODAL (%)</label>
+                <input 
+                  type="number" 
+                  step="0.5"
+                  value={targetMarginPercent} 
+                  onChange={(e) => setTargetMarginPercent(Number(e.target.value))} 
+                  placeholder="10.0"
+                  className="w-full text-sm px-3.5 py-2.5 bg-white text-slate-900 border-2 border-slate-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                />
+                <span className="text-3xs text-slate-500 block">
+                  Target Laba = Rp {((cogInput * targetMarginPercent) / 100).toLocaleString('id-ID')} | Target Diterima = Rp {(cogInput * (1 + targetMarginPercent / 100)).toLocaleString('id-ID')}
+                </span>
               </div>
 
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-bold text-slate-500">
-                  <span>POTONGAN ADMIN PLATFORM TOKO (%)</span>
-                  <span>{adminPercent}%</span>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1.5 text-xs">
+                <span className="font-bold text-slate-700 dark:text-slate-300 block">Potongan Admin Dihitung:</span>
+                <div className="flex justify-between text-slate-600 dark:text-slate-400 text-3xs">
+                  <span>Total Persentase Admin:</span>
+                  <span className="font-bold">{totalPersentasePotongan}%</span>
                 </div>
-                <input type="range" min="1" max="15" step="0.5" value={adminPercent} onChange={(e) => setAdminPercent(parseFloat(e.target.value))} className="w-full accent-blue-600" />
+                <div className="flex justify-between text-slate-600 dark:text-slate-400 text-3xs">
+                  <span>Biaya Proses Pesanan Flat:</span>
+                  <span className="font-bold">Rp {biayaProsesFlat.toLocaleString('id-ID')}</span>
+                </div>
               </div>
 
               <button 
                 onClick={handleCalculateTargetPrice}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-98"
               >
                 Mulai Hitung Harga Jual Pasang
               </button>
             </div>
           </div>
 
-          <div className="lg:col-span-7 bg-slate-900 p-6 rounded-3xl border shadow-inner flex flex-col justify-center min-h-[300px]">
+          {/* RESULT BOARD */}
+          <div className="lg:col-span-7 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-inner flex flex-col justify-center min-h-[300px]">
             {targetPriceResult ? (
-              <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl max-w-sm mx-auto w-full space-y-4 font-mono">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block text-center">REKOMENDASI HARGA UNTUK TOKO ONLINE:</span>
+              <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl max-w-md mx-auto w-full space-y-4 font-mono text-slate-200">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block text-center border-b border-slate-800 pb-2">
+                  RUMUS & HASIL HARGA JUAL TARGET:
+                </span>
                 
-                <div className="text-center bg-slate-900 p-5 border border-slate-850 rounded-xl">
-                  <span className="text-3xs text-slate-500 block uppercase font-bold">Harga Yang Harus Anda Pasang:</span>
-                  <span className="text-2xl font-bold text-emerald-400 block mt-1.5">Rp {targetPriceResult.toLocaleString('id-ID')}</span>
+                {/* STEP BY STEP FORMULA DISPLAY */}
+                <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2 text-xs">
+                  <span className="text-3xs text-amber-400 font-bold block uppercase">Rumus Kalkulasi Spreadsheet:</span>
+                  <p className="text-2xs text-slate-300">
+                    = ({cogInput.toLocaleString('id-ID')} × {(100 + targetMarginPercent)}% + {biayaProsesFlat.toLocaleString('id-ID')}) ÷ {targetPriceResult.penyebutPct}%
+                  </p>
+                  <p className="text-2xs text-slate-300">
+                    = {targetPriceResult.pembilang.toLocaleString('id-ID')} ÷ {targetPriceResult.penyebutPct}%
+                  </p>
+                </div>
+
+                <div className="text-center bg-slate-900 p-5 border border-emerald-900/50 rounded-xl">
+                  <span className="text-3xs text-slate-400 block uppercase font-bold">Hasil Harga Jual Yang Harus Dipasang:</span>
+                  <span className="text-2xl font-black text-emerald-400 block mt-1.5">
+                    Rp {targetPriceResult.hasilHargaJual.toLocaleString('id-ID')}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-900/80 rounded-lg text-3xs text-slate-400 leading-relaxed space-y-1">
+                  <p className="font-bold text-slate-300">Catatan Rumus:</p>
+                  <p>• Nilai {(100 + targetMarginPercent)}% adalah Margin dari {targetMarginPercent}% (100% + {targetMarginPercent}%).</p>
+                  <p>• Nilai {targetPriceResult.penyebutPct}% adalah hasil dari 100% dikurangi total biaya admin {totalPersentasePotongan}% (100% - {totalPersentasePotongan}% = {targetPriceResult.penyebutPct}%).</p>
                 </div>
 
                 <div className="flex justify-center pt-1">
-                  <CopyButton textToCopy={`Rekomendasi Harga Jual: Rp ${targetPriceResult.toLocaleString('id-ID')}\n(Modal: Rp ${cogInput.toLocaleString('id-ID')}, Profit Bersih Target: Rp ${targetProfit.toLocaleString('id-ID')}, Fee Admin: ${adminPercent}%)`} label="Salin Harga Target" size="sm" variant="secondary" />
+                  <CopyButton 
+                    textToCopy={`Hasil Harga Jual Target: Rp ${targetPriceResult.hasilHargaJual.toLocaleString('id-ID')}\nModal: Rp ${cogInput.toLocaleString('id-ID')}\nMargin Target (${targetMarginPercent}%): Rp ${targetPriceResult.targetLaba.toLocaleString('id-ID')}\nTotal Fee Admin (${totalPersentasePotongan}% + Rp ${biayaProsesFlat}): Rp ${targetPriceResult.pembilang.toLocaleString('id-ID')} ÷ ${targetPriceResult.penyebutPct}%`} 
+                    label="Salin Harga Target" 
+                    size="sm" 
+                    variant="secondary" 
+                  />
                 </div>
-
-                <p className="text-3xs text-slate-500 leading-relaxed text-center font-mono">Dengan harga pasang ini, saat dipotong admin {adminPercent}% Anda tetap menerima modal Rp {cogInput.toLocaleString('id-ID')} beserta untung murni Rp {targetProfit.toLocaleString('id-ID')} secara utuh.</p>
               </div>
             ) : (
               <p className="text-center text-slate-500 text-xs font-mono">Lakukan penghitungan menggunakan parameter di sebelah kiri.</p>

@@ -56,7 +56,7 @@ export default function PdfTools({ toolId }: PdfToolsProps) {
         };
         reader.readAsText(file);
       } else {
-        setPdfTeks(`[DOKUMEN DIUNGGAH: ${file.name}]\n\nIsi Dokumen Ekstraksi:\nSakuDigital berhasil memuat berkas administrasi ${file.name}.\n\nSilahkan edit draf ini sesuka Anda sebelum mencetaknya ke lembar PDF standard.`);
+        setPdfTeks(`[DOKUMEN DIUNGGAH: ${file.name}]\n\nIsi Dokumen Ekstraksi:\nKreasiKaDigital berhasil memuat berkas administrasi ${file.name}.\n\nSilahkan edit draf ini sesuka Anda sebelum mencetaknya ke lembar PDF standard.`);
       }
     }
   };

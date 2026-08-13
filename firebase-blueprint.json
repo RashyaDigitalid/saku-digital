@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "RealtimePresence": {
+      "title": "Realtime Presence",
+      "description": "Active session presence heartbeat for live visitor tracking",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "device": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "activePage": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": ["sessionId", "lastSeen"]
+    },
+    "TrafficStats": {
+      "title": "Traffic Stats",
+      "description": "Aggregated real visitor traffic and processed tool actions",
+      "type": "object",
+      "properties": {
+        "totalVisits": {
+          "type": "number"
+        },
+        "totalProcessed": {
+          "type": "number"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["totalVisits", "totalProcessed"]
+    }
+  },
+  "firestore": {
+    "/realtime_presence/{sessionId}": {
+      "schema": "RealtimePresence",
+      "description": "Heartbeat documents for real-time active visitor counting"
+    },
+    "/traffic_stats/{statId}": {
+      "schema": "TrafficStats",
+      "description": "Real traffic counter documents aggregated live"
+    }
+  }
+}

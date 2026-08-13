@@ -1,6 +1,6 @@
 {
-  "name": "SakuDigital - Alat Administrasi & UMKM Instan Gratis",
-  "description": "KaryaSaku (SakuDigital) adalah portal AI Video Subtitle Otomatis, Speech-to-Text, dan 43+ Offline Tools Administrasi Gratis untuk UMKM & Kreator Indonesia.",
+  "name": "Alat Ajaib - Portal Alat Online & Pemroses Berkas Gratis",
+  "description": "Alat Ajaib adalah portal 43+ utilitas online gratis, pemroses berkas lokal, kompresor PDF, editor subtitle video, dan kalkulator bisnis UMKM Indonesia.",
   "requestFramePermissions": ["camera", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

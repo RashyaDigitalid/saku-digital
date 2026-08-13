@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, EyeOff, Download, RefreshCw, Layers, Edit, Trash2, Sliders, Type } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { trackToolAction } from '../../lib/traffic';
 
 interface KtpToolsProps {
   toolId: string;
@@ -129,6 +130,7 @@ export default function KtpTools({ toolId }: KtpToolsProps) {
     link.click();
     document.body.removeChild(link);
     handleSuccess();
+    trackToolAction(toolId);
   };
 
   // Add auto-positioned preset zones
@@ -185,7 +187,7 @@ export default function KtpTools({ toolId }: KtpToolsProps) {
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-sm space-y-2">
         <h3 className="font-extrabold text-slate-950 dark:text-slate-100 flex items-center gap-2">
           <Shield className="w-5 h-5 text-emerald-600 animate-pulse" />
-          Workspace Pengaman KTP SakuDigital (Dual-Action)
+          Workspace Pengaman KTP KreasiKaDigital (Dual-Action)
         </h3>
         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
           <strong>Satu Alat untuk Semua Kebutuhan Pengamanan KTP!</strong> Anda sekarang dapat menempelkan tanda watermark pelindung dari penyalahgunaan pinjol ilegal sekaligus menyensor data rahasia (seperti nomor NIK, tanda tangan, atau foto wajah) secara instan dan bersamaan. 

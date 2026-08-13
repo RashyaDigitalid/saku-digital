@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    // Realtime Presence Heartbeats for Live Traffic Tracking
+    match /realtime_presence/{sessionId} {
+      allow read: if true;
+      allow create, update: if isValidId(sessionId)
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() <= 128;
+      allow delete: if isValidId(sessionId);
+    }
+
+    // Traffic Stats Counter
+    match /traffic_stats/{statId} {
+      allow read: if true;
+      allow create, update: if isValidId(statId);
+      allow delete: if false;
+    }
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

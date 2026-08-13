@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeftRight, HelpCircle } from 'lucide-react';
+import { ArrowLeftRight, HelpCircle, Sparkles, Heart } from 'lucide-react';
 import { Tool } from '../types';
 import KtpTools from './tools/KtpTools';
 import MediaTools from './tools/MediaTools';
@@ -95,40 +95,53 @@ export default function ToolWrapper({ tool, reverseTool, onToggleReverse }: Tool
     return (
       <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-100">
         <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-        <p className="text-sm font-semibold text-slate-600">Alat ini sedang dikembangkan oleh tim ahli SakuDigital</p>
+        <p className="text-sm font-semibold text-slate-600">Alat ini sedang dikembangkan oleh tim ahli KreasiKaDigital</p>
       </div>
     );
   };
 
   return (
-    <div className="space-y-6">
-      {/* COMPLEMENTARY TOOL SWITCHER HEADER ACCENT */}
+    <div className="space-y-4">
+      {/* COMPLEMENTARY TOOL SWITCHER (MINIMAL) */}
       {reverseTool && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-100 dark:border-blue-900/40 rounded-2xl gap-3">
-          <div className="space-y-0.5">
-            <span className="text-3xs font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest block">Fitur Pendukung SakuDigital</span>
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Alat ini memiliki fungsi <strong className="text-blue-600 dark:text-blue-400">kebalikan / komplementer</strong> untuk melengkapi kebutuhan Anda.
-            </span>
-          </div>
-
+        <div className="flex items-center justify-between p-2.5 sm:p-3 bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-xl text-xs">
+          <span className="text-slate-600 dark:text-slate-300">
+            Alat alternatif: <strong className="text-blue-600 dark:text-blue-400">{reverseTool.name}</strong>
+          </span>
           <button
             onClick={() => onToggleReverse(reverseTool.id)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600/90 dark:hover:bg-blue-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 shrink-0"
+            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-3xs sm:text-xs rounded-lg flex items-center gap-1 cursor-pointer transition-all active:scale-95 shrink-0"
           >
-            <ArrowLeftRight className="w-3.5 h-3.5" /> Tukar ke: {reverseTool.name}
+            <ArrowLeftRight className="w-3 h-3" /> Buka
           </button>
         </div>
       )}
 
       {/* CORE ACTIVE TOOL SCREEN */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-sm overflow-hidden">
-        <div className="mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-xl font-black text-slate-900 dark:text-slate-100 break-words">{tool.name}</h2>
-          <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{tool.description}</p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs overflow-hidden">
+        <div className="mb-4">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">{tool.name}</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{tool.description}</p>
         </div>
         
         {renderToolBody()}
+
+        {/* SAWERIA SUPPORT REMINDER IN ACTIVE TOOL */}
+        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-2xs text-slate-500">
+          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-medium text-center sm:text-left">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span>Alat Ajaib diproses 100% lokal & gratis. Terbantu dengan alat ini?</span>
+          </div>
+          <a 
+            href="https://saweria.co/RashRays" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg inline-flex items-center gap-1.5 transition-all active:scale-95 shrink-0 shadow-2xs"
+          >
+            <Heart className="w-3 h-3 fill-white" />
+            <span>Dukung via Saweria</span>
+          </a>
+        </div>
       </div>
     </div>
   );
