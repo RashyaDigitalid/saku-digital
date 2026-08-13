@@ -127,18 +127,19 @@ export default function ToolWrapper({ tool, reverseTool, onToggleReverse }: Tool
         {renderToolBody()}
 
         {/* SAWERIA SUPPORT REMINDER IN ACTIVE TOOL */}
-        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-2xs text-slate-500">
-          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-medium text-center sm:text-left">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>Alat Ajaib diproses 100% lokal & gratis. Terbantu dengan alat ini?</span>
+        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-2xs text-slate-600 dark:text-slate-300">
+          <div className="flex items-center gap-2 font-medium text-center sm:text-left">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>Dukung kami mengembangkan portal Alat Ajaib ini agar tetap 100% gratis, aman, dan selalu diperbarui.</span>
           </div>
           <a 
             href="https://saweria.co/RashRays" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg inline-flex items-center gap-1.5 transition-all active:scale-95 shrink-0 shadow-2xs"
+            className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-xl inline-flex items-center gap-1.5 transition-all active:scale-95 shrink-0 shadow-xs text-xs"
+            title="Dukung Alat Ajaib via Saweria"
           >
-            <Heart className="w-3 h-3 fill-white" />
+            <Heart className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
             <span>Dukung via Saweria</span>
           </a>
         </div>
