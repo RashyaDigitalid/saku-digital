@@ -118,19 +118,23 @@ export default function KtpTools({ toolId }: KtpToolsProps) {
     };
   }, [image, watermarkActive, watermarkText, opacity, fontSize, angle, density, redactZones]);
 
-  // Download secured image
+  // Download secured image directly from memory Blob
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const url = canvas.toDataURL('image/jpeg', 0.95);
-    const link = document.createElement('a');
-    link.download = 'ktp_aman.jpg';
-    link.href = url;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    handleSuccess();
-    trackToolAction(toolId);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `ktp_aman_${Date.now()}.jpg`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      handleSuccess();
+      trackToolAction(toolId);
+    }, 'image/jpeg', 0.95);
   };
 
   // Add auto-positioned preset zones

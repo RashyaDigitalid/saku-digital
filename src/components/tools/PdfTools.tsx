@@ -1,24 +1,29 @@
 import React, { useState, useRef } from 'react';
-import { FileArchive, Columns, FileImage, FileDown, SearchCode, FilePlus, Download, Trash2, Plus, ArrowRight, Eye, ShieldAlert } from 'lucide-react';
+import { 
+  FileArchive, Columns, FileImage, FileDown, SearchCode, FilePlus, 
+  Download, Trash2, Plus, ArrowRight, Eye, ShieldAlert, Sparkles, 
+  CheckCircle2, RefreshCw, Layers, Copy, FileText, MoveUp, MoveDown
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import CopyButton from '../CopyButton';
 
 interface PdfToolsProps {
   toolId: string;
 }
 
 export default function PdfTools({ toolId }: PdfToolsProps) {
-  const [images, setImages] = useState<{ id: string; name: string; src: string; size: number }[]>([]);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfPagesCount, setPdfPagesCount] = useState(0);
-  const [pdfTeks, setPdfTeks] = useState('Draf teks berkas anda di sini...');
-  const [targetSize, setTargetSize] = useState<'200kb' | '500kb'>('200kb');
-  const [pdfList, setPdfList] = useState<{ id: string; name: string; pages: number; size: number }[]>([]);
+  const triggerSuccess = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.8 },
+    });
+  };
 
-  const [pdfDataUriList, setPdfDataUriList] = useState<string[]>([]);
-  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
-  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
-  const [extractedText, setExtractedText] = useState('Sedang mengekstrak teks...');
-
+  // ----------------------------------------------------
+  // HELPER: PDF.JS LOADER
+  // ----------------------------------------------------
   const loadPdfJs = (): Promise<any> => {
     return new Promise((resolve, reject) => {
       if ((window as any).pdfjsLib) {
@@ -33,404 +38,590 @@ export default function PdfTools({ toolId }: PdfToolsProps) {
         resolve(pdfjsLib);
       };
       script.onerror = (err) => {
-        console.error("Gagal meload pdf.js", err);
+        console.error("Gagal memuat pdf.js", err);
         reject(err);
       };
       document.head.appendChild(script);
     });
   };
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const docFileInputRef = useRef<HTMLInputElement | null>(null);
+  // ----------------------------------------------------
+  // 1. STATE: JPG TO PDF
+  // ----------------------------------------------------
+  const [images, setImages] = useState<{ id: string; file: File; name: string; src: string; size: number }[]>([]);
+  const [isGeneratingPdfFromImages, setIsGeneratingPdfFromImages] = useState(false);
+  const jpgToPdfInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleDocFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      
-      if (file.name.endsWith('.txt')) {
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            setPdfTeks(event.target.result as string);
-          }
-        };
-        reader.readAsText(file);
-      } else {
-        setPdfTeks(`[DOKUMEN DIUNGGAH: ${file.name}]\n\nIsi Dokumen Ekstraksi:\nKreasiKaDigital berhasil memuat berkas administrasi ${file.name}.\n\nSilahkan edit draf ini sesuka Anda sebelum mencetaknya ke lembar PDF standard.`);
+  const handleJpgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newItems: { id: string; file: File; name: string; src: string; size: number }[] = [];
+    const filesList = Array.from(e.target.files) as File[];
+    
+    filesList.forEach((file: File) => {
+      const src = URL.createObjectURL(file);
+      newItems.push({
+        id: Math.random().toString(36).substring(2, 9),
+        file,
+        name: file.name,
+        src,
+        size: file.size,
+      });
+    });
+
+    setImages((prev) => [...prev, ...newItems]);
+  };
+
+  const removeJpg = (id: string) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const moveJpg = (idx: number, dir: 'up' | 'down') => {
+    if (dir === 'up' && idx === 0) return;
+    if (dir === 'down' && idx === images.length - 1) return;
+    const newArr = [...images];
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+    const temp = newArr[idx];
+    newArr[idx] = newArr[targetIdx];
+    newArr[targetIdx] = temp;
+    setImages(newArr);
+  };
+
+  // Real compilation using pdf-lib
+  const handleCompileJpgToPdf = async () => {
+    if (images.length === 0) return;
+    setIsGeneratingPdfFromImages(true);
+
+    try {
+      const pdfDoc = await PDFDocument.create();
+
+      for (const item of images) {
+        const arrayBuffer = await item.file.arrayBuffer();
+        let pdfImage;
+        if (item.file.type.includes('png')) {
+          pdfImage = await pdfDoc.embedPng(arrayBuffer);
+        } else {
+          // jpg / jpeg / webp
+          pdfImage = await pdfDoc.embedJpg(arrayBuffer);
+        }
+
+        // Standard A4: 595.28 x 841.89 points
+        const a4Width = 595.28;
+        const a4Height = 841.89;
+        const page = pdfDoc.addPage([a4Width, a4Height]);
+
+        const imgDims = pdfImage.scaleToFit(a4Width - 40, a4Height - 40);
+
+        page.drawImage(pdfImage, {
+          x: (a4Width - imgDims.width) / 2,
+          y: (a4Height - imgDims.height) / 2,
+          width: imgDims.width,
+          height: imgDims.height,
+        });
       }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `Gabungan_Foto_Dokumen_${Date.now()}.pdf`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      triggerSuccess();
+    } catch (err) {
+      console.error('Error creating PDF from images:', err);
+      alert('Gagal menyusun PDF dari gambar. Pastikan format gambar berupa JPG atau PNG valid.');
+    } finally {
+      setIsGeneratingPdfFromImages(false);
+    }
+  };
+
+  // ----------------------------------------------------
+  // 2. STATE: PDF TO JPG & EKSTRAK PDF & KOMPRES PDF
+  // ----------------------------------------------------
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfPagesCount, setPdfPagesCount] = useState(0);
+  const [pdfDataUriList, setPdfDataUriList] = useState<string[]>([]);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [extractedText, setExtractedText] = useState('');
+  const [targetSize, setTargetSize] = useState<'200kb' | '500kb'>('200kb');
+  const [compressedPdfBlobUrl, setCompressedPdfBlobUrl] = useState<string | null>(null);
+  const [compressedSize, setCompressedSize] = useState<number | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const singlePdfInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleSinglePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    setPdfFile(file);
+    setPdfPagesCount(0);
+    setPdfDataUriList([]);
+    setExtractedText('');
+    setCompressedPdfBlobUrl(null);
+    setCompressedSize(null);
+    setIsProcessingPdf(true);
+
+    try {
+      const pdfjs = await loadPdfJs();
+      const fileBuffer = await file.arrayBuffer();
+      const typedArray = new Uint8Array(fileBuffer);
+      const pdf = await pdfjs.getDocument({ data: typedArray }).promise;
+      setPdfPagesCount(pdf.numPages);
+
+      const uris: string[] = [];
+      let fullText = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        
+        // Render high-res canvas (scale 1.8 for crisp quality)
+        const viewport = page.getViewport({ scale: 1.8 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          uris.push(canvas.toDataURL('image/jpeg', 0.92));
+        }
+
+        // Extract text
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += `[HALAMAN ${i}]\n${pageText}\n\n`;
+      }
+
+      setPdfDataUriList(uris);
+      setExtractedText(fullText.trim() || 'Tidak ada teks berbasis font terdeteksi (PDF mungkin berupa hasil foto/scan murni).');
+      triggerSuccess();
+    } catch (err: any) {
+      console.error('Error processing PDF:', err);
+      alert('Gagal memproses berkas PDF. Pastikan file PDF tidak terkunci kata sandi.');
+    } finally {
+      setIsProcessingPdf(false);
     }
   };
 
   const handleDownloadPdfPageAsJpg = (pageIndex: number) => {
-    if (!pdfFile) return;
+    if (!pdfDataUriList[pageIndex] || !pdfFile) return;
+    const link = document.createElement('a');
+    link.download = `${pdfFile.name.replace(/\.pdf$/i, '')}_Halaman_${pageIndex + 1}.jpg`;
+    link.href = pdfDataUriList[pageIndex];
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerSuccess();
+  };
+
+  const handleDownloadAllPagesAsJpg = () => {
+    pdfDataUriList.forEach((uri, idx) => {
+      setTimeout(() => {
+        handleDownloadPdfPageAsJpg(idx);
+      }, idx * 350);
+    });
+  };
+
+  // Real PDF Compression by rendering pages with smart JPEG quality downscaling
+  const handlePerformRealCompression = async () => {
+    if (!pdfFile || pdfDataUriList.length === 0) return;
+    setIsCompressing(true);
+
+    try {
+      const pdfDoc = await PDFDocument.create();
+      const quality = targetSize === '200kb' ? 0.6 : 0.78;
+      const scaleFactor = targetSize === '200kb' ? 0.75 : 0.9;
+
+      const pdfjs = await loadPdfJs();
+      const fileBuffer = await pdfFile.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: new Uint8Array(fileBuffer) }).promise;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: scaleFactor });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          
+          // Embed into new PDF
+          const res = await fetch(compressedDataUrl);
+          const imgBuffer = await res.arrayBuffer();
+          const embeddedImg = await pdfDoc.embedJpg(imgBuffer);
+
+          const pageDims: [number, number] = [viewport.width, viewport.height];
+          const newPage = pdfDoc.addPage(pageDims);
+          newPage.drawImage(embeddedImg, {
+            x: 0,
+            y: 0,
+            width: viewport.width,
+            height: viewport.height,
+          });
+        }
+      }
+
+      const compressedBytes = await pdfDoc.save();
+      const blob = new Blob([compressedBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setCompressedPdfBlobUrl(url);
+      setCompressedSize(blob.size);
+      triggerSuccess();
+    } catch (err) {
+      console.error('Error compressing PDF:', err);
+      alert('Gagal mengompresi PDF. Silakan coba kembali.');
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
+  const downloadCompressedPdf = () => {
+    if (!compressedPdfBlobUrl || !pdfFile) return;
+    const link = document.createElement('a');
+    link.download = `${pdfFile.name.replace(/\.pdf$/i, '')}_kompres_${targetSize}.pdf`;
+    link.href = compressedPdfBlobUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerSuccess();
+  };
+
+  // ----------------------------------------------------
+  // 3. STATE: PDF MERGER
+  // ----------------------------------------------------
+  const [pdfMergeList, setPdfMergeList] = useState<{ id: string; file: File; name: string; size: number }[]>([]);
+  const [isMerging, setIsMerging] = useState(false);
+  const mergeFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleMergeFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newItems: { id: string; file: File; name: string; size: number }[] = [];
+    const filesList = Array.from(e.target.files) as File[];
     
-    if (pdfDataUriList[pageIndex]) {
+    filesList.forEach((file: File) => {
+      newItems.push({
+        id: Math.random().toString(36).substring(2, 9),
+        file,
+        name: file.name,
+        size: file.size,
+      });
+    });
+
+    setPdfMergeList((prev) => [...prev, ...newItems]);
+  };
+
+  const removeMergePdf = (id: string) => {
+    setPdfMergeList((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const moveMergePdf = (idx: number, dir: 'up' | 'down') => {
+    if (dir === 'up' && idx === 0) return;
+    if (dir === 'down' && idx === pdfMergeList.length - 1) return;
+    const newArr = [...pdfMergeList];
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+    const temp = newArr[idx];
+    newArr[idx] = newArr[targetIdx];
+    newArr[targetIdx] = temp;
+    setPdfMergeList(newArr);
+  };
+
+  // Real PDF Merge with pdf-lib
+  const handlePerformMerge = async () => {
+    if (pdfMergeList.length < 2) {
+      alert('Harap masukkan minimal 2 berkas PDF untuk digabungkan.');
+      return;
+    }
+    setIsMerging(true);
+
+    try {
+      const mergedPdf = await PDFDocument.create();
+
+      for (const item of pdfMergeList) {
+        const fileBuffer = await item.file.arrayBuffer();
+        const srcPdf = await PDFDocument.load(fileBuffer);
+        const copiedPages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      }
+
+      const mergedBytes = await mergedPdf.save();
+      const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `${pdfFile.name.replace('.pdf', '')}_Halaman_${pageIndex + 1}.jpg`;
-      link.href = pdfDataUriList[pageIndex];
+      link.download = `PDF_Gabungan_Resmi_${Date.now()}.pdf`;
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       triggerSuccess();
-      return;
+    } catch (err) {
+      console.error('Error merging PDFs:', err);
+      alert('Gagal menggabungkan berkas PDF. Pastikan seluruh file PDF valid dan tidak diproteksi password.');
+    } finally {
+      setIsMerging(false);
     }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 1130; // A4 size
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    // Background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Content header
-    ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 24px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('REPUBLIK INDONESIA', canvas.width / 2, 120);
-    
-    ctx.font = 'bold 20px Georgia, serif';
-    ctx.fillText('SALINAN RESMI DOKUMEN DIGITAL', canvas.width / 2, 160);
-    
-    ctx.font = 'italic 14px sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(`Diolah secara lokal secara aman & privat`, canvas.width / 2, 190);
-    
-    // Decorative line
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(100, 220);
-    ctx.lineTo(canvas.width - 100, 220);
-    ctx.stroke();
-    
-    // Document metadata
-    ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 16px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`NAMA BERKAS : ${pdfFile.name}`, 100, 280);
-    ctx.fillText(`UKURAN FILE : ${(pdfFile.size / 1024).toFixed(1)} KB`, 100, 310);
-    ctx.fillText(`HALAMAN     : ${pageIndex + 1} dari ${pdfPagesCount || 1}`, 100, 340);
-    ctx.fillText(`KODE VERIF  : VERIFY-PDF-${Math.floor(Math.random() * 90000) + 10000}`, 100, 370);
-    
-    // Dummy Document Body simulation to represent real text extraction
-    ctx.font = '14px sans-serif';
-    ctx.fillStyle = '#334155';
-    const lines = [
-      "SURAT PERNYATAAN DAN PERJANJIAN ADMINISTRASI",
-      "Yang bertanda tangan di bawah ini menyatakan dengan sesungguhnya bahwa seluruh",
-      "berkas administrasi pendaftaran CPNS / P3K yang telah dikonversi dan diproses",
-      "ini adalah dokumen yang sah and benar sesuai hukum.",
-      "",
-      "Segala bentuk kesalahan, kegagalan sistem, maupun manipulasi data di luar tanggung",
-      "jawab pengembang atau aplikasi. Pemrosesan dilakukan 100% pada peramban web lokal tanpa",
-      "adanya transmisi data ke server luar (Client-Side Secured Engine).",
-      "",
-      "Demikian salinan ini dicetak secara otomatis untuk memenuhi syarat administrasi."
-    ];
-    
-    let y = 450;
-    lines.forEach((line) => {
-      if (line.startsWith("SURAT")) {
-        ctx.font = 'bold 15px Georgia, serif';
-        ctx.fillText(line, 100, y);
-      } else {
-        ctx.font = '14px Georgia, serif';
-        ctx.fillText(line, 100, y);
-      }
-      y += 30;
-    });
-    
-    // Download
-    const url = canvas.toDataURL('image/jpeg', 0.9);
-    const link = document.createElement('a');
-    link.download = `${pdfFile.name.replace('.pdf', '')}_Halaman_${pageIndex + 1}.jpg`;
-    link.href = url;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    triggerSuccess();
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray: File[] = Array.from(e.target.files);
-      
-      if (toolId === 'jpg-to-pdf') {
-        filesArray.forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) {
-              setImages((prev) => [
-                ...prev,
-                {
-                  id: Math.random().toString(),
-                  name: file.name,
-                  src: event.target!.result as string,
-                  size: file.size,
-                },
-              ]);
+  // ----------------------------------------------------
+  // 4. STATE: TEXT TO PDF
+  // ----------------------------------------------------
+  const [textToPdfTitle, setTextToPdfTitle] = useState('SURAT PERNYATAAN ADMINISTRASI');
+  const [textToPdfBody, setTextToPdfBody] = useState(
+    'Yang bertanda tangan di bawah ini menyatakan dengan sesungguhnya bahwa seluruh data dan dokumen yang terlampir adalah benar, sah, dan dapat dipertanggungjawabkan di hadapan hukum.\n\nDemikian pernyataan ini dibuat secara sadar tanpa paksaan untuk dipergunakan sebagaimana mestinya.'
+  );
+  const [textToPdfSigner, setTextToPdfSigner] = useState('Petugas / Pemohon,\n\n\n\n( Budi Santoso )');
+  const [isGeneratingTextPdf, setIsGeneratingTextPdf] = useState(false);
+  const docUploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleDocForTextUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    const text = await file.text();
+    setTextToPdfTitle(file.name.replace(/\.[^/.]+$/, '').toUpperCase());
+    setTextToPdfBody(text.trim() || 'Draf isi teks dokumen...');
+  };
+
+  // Generate real PDF from text using pdf-lib with wrapping
+  const handleGenerateTextPdf = async () => {
+    setIsGeneratingTextPdf(true);
+    try {
+      const pdfDoc = await PDFDocument.create();
+      const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+      const fontTimesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+
+      const a4Width = 595.28;
+      const a4Height = 841.89;
+      const margin = 50;
+      const contentWidth = a4Width - margin * 2;
+
+      let page = pdfDoc.addPage([a4Width, a4Height]);
+      let y = a4Height - margin;
+
+      // Header Title
+      page.drawText('REPUBLIK INDONESIA', {
+        x: margin,
+        y: y,
+        size: 16,
+        font: fontTimesBold,
+        color: rgb(0.1, 0.15, 0.3),
+      });
+      y -= 22;
+
+      page.drawText(textToPdfTitle, {
+        x: margin,
+        y: y,
+        size: 13,
+        font: fontTimesBold,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+      y -= 14;
+
+      // Divider Line
+      page.drawLine({
+        start: { x: margin, y: y },
+        end: { x: a4Width - margin, y: y },
+        thickness: 1.5,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      y -= 30;
+
+      // Body lines with word wrapping
+      const paragraphs = textToPdfBody.split('\n');
+      const fontSize = 11;
+      const lineHeight = 16;
+
+      for (const p of paragraphs) {
+        if (p.trim() === '') {
+          y -= lineHeight * 0.8;
+          continue;
+        }
+
+        const words = p.split(' ');
+        let currentLine = '';
+
+        for (const word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const width = fontTimes.widthOfTextAtSize(testLine, fontSize);
+
+          if (width > contentWidth && currentLine !== '') {
+            if (y < margin + 120) {
+              // Add new page if space runs out
+              page = pdfDoc.addPage([a4Width, a4Height]);
+              y = a4Height - margin;
             }
-          };
-          reader.readAsDataURL(file);
-        });
-      } else if (toolId === 'pdf-merger') {
-        filesArray.forEach((file) => {
-          setPdfList((prev) => [
-            ...prev,
-            {
-              id: Math.random().toString(),
-              name: file.name,
-              pages: Math.floor(Math.random() * 4) + 1, // Simulated layout page count
-              size: file.size,
-            },
-          ]);
-        });
-      } else {
-        const file = e.target.files[0];
-        setPdfFile(file);
-        setPdfPagesCount(0);
-        setPdfDataUriList([]);
-        setPdfLoadError(null);
-        setIsProcessingPdf(true);
-        setExtractedText('Sedang mengekstrak teks & gambar secara lokal...');
+            page.drawText(currentLine, {
+              x: margin,
+              y: y,
+              size: fontSize,
+              font: fontTimes,
+              color: rgb(0.15, 0.15, 0.15),
+            });
+            y -= lineHeight;
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
 
-        try {
-          const pdfjs = await loadPdfJs();
-          const fileReader = new FileReader();
-          fileReader.onload = async (event) => {
-            try {
-              const typedArray = new Uint8Array(event.target?.result as ArrayBuffer);
-              const pdf = await pdfjs.getDocument({ data: typedArray }).promise;
-              setPdfPagesCount(pdf.numPages);
-
-              const uris: string[] = [];
-              let extractedTextResult = '';
-
-              for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                
-                // Render Page to Canvas
-                const viewport = page.getViewport({ scale: 1.5 });
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                if (ctx) {
-                  await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                  uris.push(canvas.toDataURL('image/jpeg', 0.95));
-                }
-
-                // Extract Text
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map((item: any) => item.str).join(' ');
-                extractedTextResult += `[Halaman ${i}]\n${pageText}\n\n`;
-              }
-
-              setPdfDataUriList(uris);
-              setExtractedText(extractedTextResult.trim() || 'Tidak ada teks terdeteksi dalam file PDF.');
-              triggerSuccess();
-            } catch (err: any) {
-              console.error("Gagal memproses PDF", err);
-              setPdfLoadError("Gagal membaca atau memproses dokumen PDF.");
-              setExtractedText("Gagal mengekstrak teks dari berkas ini.");
-            } finally {
-              setIsProcessingPdf(false);
-            }
-          };
-          fileReader.readAsArrayBuffer(file);
-        } catch (err: any) {
-          console.error("Gagal memuat PDF.js", err);
-          setPdfLoadError("Gagal memuat sistem pemroses PDF lokal.");
-          setIsProcessingPdf(false);
+        if (currentLine) {
+          if (y < margin + 120) {
+            page = pdfDoc.addPage([a4Width, a4Height]);
+            y = a4Height - margin;
+          }
+          page.drawText(currentLine, {
+            x: margin,
+            y: y,
+            size: fontSize,
+            font: fontTimes,
+            color: rgb(0.15, 0.15, 0.15),
+          });
+          y -= lineHeight;
         }
       }
+
+      // Signature Block
+      y -= 40;
+      if (y < margin + 80) {
+        page = pdfDoc.addPage([a4Width, a4Height]);
+        y = a4Height - margin;
+      }
+
+      const sigLines = textToPdfSigner.split('\n');
+      for (const sLine of sigLines) {
+        page.drawText(sLine, {
+          x: a4Width - margin - 180,
+          y: y,
+          size: 11,
+          font: fontTimesBold,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+        y -= 14;
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${textToPdfTitle.toLowerCase().replace(/ /g, '_')}.pdf`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      triggerSuccess();
+    } catch (err) {
+      console.error('Error generating text PDF:', err);
+    } finally {
+      setIsGeneratingTextPdf(false);
     }
-  };
-
-  const removeImage = (id: string) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
-  };
-
-  const removePdf = (id: string) => {
-    setPdfList((prev) => prev.filter((pdf) => pdf.id !== id));
-  };
-
-  const triggerSuccess = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.8 },
-    });
-  };
-
-  // 1. COMPILE IMAGES INTO A PDF DOCUMENT (JPG TO PDF)
-  const handleCompileJpgToPdf = () => {
-    if (images.length === 0) return;
-
-    // We can generate a printable web page view, or write a raw PDF structure
-    // Creating a beautiful multi-page print view which handles "Save as PDF" instantly with 100% vector resolution!
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-      <head>
-        <title>SakuDigital - Ekspor PDF</title>
-        <style>
-          @page { size: A4; margin: 0; }
-          body { margin: 0; background-color: #f1f5f9; font-family: sans-serif; }
-          .page { width: 210mm; height: 297mm; background: white; margin: 10px auto; box-sizing: border-box; display: flex; align-items: center; justify-content: center; page-break-after: always; overflow: hidden; position: relative; }
-          img { max-width: 100%; max-height: 100%; object-fit: contain; }
-          @media print {
-            body { background: transparent; }
-            .page { margin: 0; width: 100%; height: 100vh; page-break-after: always; box-shadow: none; }
-          }
-        </style>
-      </head>
-      <body>
-        ${images.map((img) => `
-          <div class="page">
-            <img src="${img.src}" />
-          </div>
-        `).join('')}
-        <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() { window.close(); }, 500);
-          }
-        </script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    triggerSuccess();
-  };
-
-  // 2. CONVERT WRITTEN TEXT DIRECTLY TO PDF
-  const handleCompileTextToPdf = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-      <head>
-        <title>Dokumen_Cetak</title>
-        <style>
-          @page { size: A4; margin: 20mm; }
-          body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.6; color: #1e293b; }
-          .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 25px; }
-          .header h1 { font-size: 16pt; margin: 0; text-transform: uppercase; }
-          .header p { font-size: 10pt; margin: 5px 0 0; }
-          .content { text-align: justify; white-space: pre-wrap; min-height: 500px; }
-          .signature { margin-top: 50px; float: right; width: 250px; font-weight: bold; }
-          @media print {
-            body { margin: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Dokumen Cetak Lokal</h1>
-          <p>Sistem Pembuat Berkas Mandiri & Instan</p>
-        </div>
-        <div class="content">${pdfTeks}</div>
-        <div class="signature">
-          <p>Petugas Administrasi,</p>
-          <br/><br/><br/>
-          <p>( _______________________ )</p>
-        </div>
-        <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() { window.close(); }, 500);
-          }
-        </script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    triggerSuccess();
-  };
-
-  // 3. DOWNLOAD SIMULATED EXPORTS
-  const handleSimulatedDownload = (fileName: string) => {
-    // Standard mock file creation for other non-compilable tools so user has complete file output
-    const blob = new Blob(['Simulasi PDF Output - Luring Aman'], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = fileName;
-    link.href = url;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    triggerSuccess();
   };
 
   return (
     <div className="space-y-6">
-      {/* HEADER WARNING NOTICE */}
-      <div className="bg-blue-50 dark:bg-slate-850 p-4 rounded-xl border border-blue-100 dark:border-slate-800 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2.5">
-        <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+      
+      {/* HEADER NOTICE */}
+      <div className="bg-sky-50 dark:bg-sky-950/30 p-4 rounded-2xl border border-sky-200 dark:border-sky-800/60 text-xs text-sky-800 dark:text-sky-300 flex items-start gap-3 shadow-xs">
+        <ShieldAlert className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
         <div>
-          <p className="font-bold mb-0.5">SakuDigital PDF Processing Center (100% Offline)</p>
-          <p className="leading-relaxed">Semua aktivitas pemecahan, penggabungan, konversi, dan pengolahan PDF dikerjakan secara lokal di perangkat Anda menggunakan JavaScript. Berkas berharga Anda dijamin aman 100% dari intip server luar.</p>
+          <p className="font-extrabold text-sm mb-0.5">Pemrosesan Dokumen PDF Asli 100% Privat & Aman</p>
+          <p className="leading-relaxed text-3xs text-sky-700 dark:text-sky-300">
+            Seluruh berkas diproses langsung pada peramban peranti Anda tanpa transmisi ke server eksternal. Mendukung berkas resmi ijazah, transkrip, surat lamaran, CPNS, dan BKN.
+          </p>
         </div>
       </div>
 
-      {/* A. JPG TO PDF BUILDER */}
+      {/* ========================================================================= */}
+      {/* 1. TOOL: JPG TO PDF */}
+      {/* ========================================================================= */}
       {toolId === 'jpg-to-pdf' && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="font-bold text-slate-800 dark:text-slate-200">Kompilasi Gambar ke PDF Berkas</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Unggah beberapa foto berkas (Ijazah, SKHUN, KK), atur urutan halamannya, dan gabungkan menjadi file PDF tunggal.</p>
+              <h3 className="font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-base">
+                <FileImage className="w-5 h-5 text-sky-600" />
+                Gabungkan Foto / Gambar Scan ke Berkas PDF Tunggal
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Unggah beberapa foto berkas asli dari galeri/memori HP, sesuaikan urutannya, dan susun ke lembar PDF A4 resmi.
+              </p>
             </div>
             
             <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow"
+              onClick={() => jpgToPdfInputRef.current?.click()}
+              className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
             >
-              <Plus className="w-4 h-4" /> Upload Foto Berkas
+              <Plus className="w-4 h-4" /> Unggah Foto Berkas
             </button>
-            <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <input ref={jpgToPdfInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleJpgUpload} />
           </div>
 
           {images.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 pt-6 border-t border-slate-100 dark:border-slate-700/80">
-              {/* SIDE CONTROLLER */}
-              <div className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100">
-                <span className="text-xs font-bold text-slate-600 block uppercase tracking-wider">Setelan Dokumen</span>
-                <div className="text-xs bg-white dark:bg-slate-800 p-3 rounded-lg space-y-1.5 border border-slate-100">
-                  <p className="font-semibold text-slate-500">Jumlah Halaman: <strong className="text-slate-800 dark:text-slate-200">{images.length} Hal</strong></p>
-                  <p className="text-slate-400">Ukuran Kertas: <strong>A4 Standard</strong></p>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+              {/* SIDEBAR SETTINGS */}
+              <div className="lg:col-span-4 space-y-4 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
+                  Pengaturan Dokumen
+                </span>
+                
+                <div className="text-xs bg-white dark:bg-slate-850 p-3.5 rounded-xl space-y-2 border border-slate-200 dark:border-slate-800">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Jumlah Halaman:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">{images.length} Lembar</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Format Lembar:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">A4 Standard (Resmi)</strong>
+                  </div>
                 </div>
 
                 <button 
                   onClick={handleCompileJpgToPdf}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow"
+                  disabled={isGeneratingPdfFromImages}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
                 >
-                  <FileDown className="w-4 h-4" /> Buat & Ekspor PDF
+                  <FileDown className="w-4 h-4" />
+                  {isGeneratingPdfFromImages ? 'Menyusun Dokumen PDF...' : 'Buat & Unduh File PDF Asli'}
                 </button>
               </div>
 
-              {/* IMAGES GRID */}
-              <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[350px] overflow-y-auto pr-2">
+              {/* IMAGES REORDERABLE LIST */}
+              <div className="lg:col-span-8 space-y-2.5 max-h-[450px] overflow-y-auto pr-1">
                 {images.map((img, idx) => (
-                  <div key={img.id} className="relative bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-2 rounded-xl flex flex-col justify-between">
-                    <span className="absolute top-3 left-3 bg-blue-600 text-white text-3xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">
+                  <div key={img.id} className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                    <span className="w-6 h-6 rounded-full bg-sky-600 text-white font-bold text-3xs flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
-                    <img src={img.src} alt="Page Item" className="w-full h-28 object-cover rounded-lg" />
-                    
-                    <div className="mt-2 flex items-center justify-between">
-                      <p className="text-3xs font-semibold text-slate-700 dark:text-slate-300 truncate w-2/3">{img.name}</p>
+                    <img src={img.src} alt={img.name} className="w-12 h-12 object-cover rounded-lg border shrink-0" />
+                    <div className="flex-grow min-w-0">
+                      <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{img.name}</p>
+                      <p className="text-3xs text-slate-400 mt-0.5">{(img.size / 1024).toFixed(1)} KB • Halaman #{idx + 1}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <button 
-                        onClick={() => removeImage(img.id)}
-                        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 rounded"
+                        onClick={() => moveJpg(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                        title="Pindah ke Atas"
+                      >
+                        <MoveUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => moveJpg(idx, 'down')}
+                        disabled={idx === images.length - 1}
+                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                        title="Pindah ke Bawah"
+                      >
+                        <MoveDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => removeJpg(img.id)}
+                        className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer"
+                        title="Hapus"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -440,209 +631,182 @@ export default function PdfTools({ toolId }: PdfToolsProps) {
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center border-2 border-dashed border-slate-150 dark:border-slate-750 rounded-2xl bg-slate-50/50 dark:bg-slate-800/10">
-              <FileImage className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-              <p className="text-xs text-slate-500 font-semibold">Sila unggah foto-foto jepretan dokumen Anda</p>
-              <p className="text-3xs text-slate-400 mt-0.5">Sistem akan menyusunnya per halaman secara urut</p>
+            <div 
+              onClick={() => jpgToPdfInputRef.current?.click()}
+              className="py-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 cursor-pointer hover:bg-sky-50/20 transition-all"
+            >
+              <FileImage className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Pilih Berkas Foto Scan Anda</p>
+              <p className="text-3xs text-slate-400 mt-0.5">Mendukung format JPG, JPEG, PNG, WebP</p>
             </div>
           )}
         </div>
       )}
 
-      {/* B. TEXT TO PDF BUILDER */}
-      {toolId === 'text-to-pdf' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-6 space-y-4">
-            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-800 dark:text-slate-200">Tulis Catatan / Teks ke PDF</span>
-                
-                {/* File Upload Selector */}
-                <div>
-                  <button 
-                    onClick={() => docFileInputRef.current?.click()}
-                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 font-extrabold text-[10px] rounded border border-blue-200 dark:border-blue-900 cursor-pointer flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> Unggah Word / Teks (.doc, .txt)
-                  </button>
-                  <input 
-                    ref={docFileInputRef} 
-                    type="file" 
-                    accept=".doc,.docx,.txt" 
-                    className="hidden" 
-                    onChange={handleDocFileUpload} 
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">MASUKKAN DRAF TEKS</label>
-                <textarea 
-                  rows={10} 
-                  value={pdfTeks} 
-                  onChange={(e) => setPdfTeks(e.target.value)}
-                  className="w-full text-xs p-3 border rounded-xl dark:bg-slate-900 resize-none outline-none focus:ring-2 focus:ring-blue-500" 
-                />
-              </div>
-
-              <button 
-                onClick={handleCompileTextToPdf}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow"
-              >
-                <FilePlus className="w-4 h-4" /> Cetak & Download PDF
-              </button>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 bg-slate-900 p-6 rounded-3xl border shadow-inner flex flex-col justify-center min-h-[400px]">
-            <div className="bg-white text-slate-800 p-8 rounded-lg shadow-2xl w-full text-xs font-serif min-h-[300px] flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="text-center border-b pb-2 space-y-1">
-                  <p className="font-bold text-xs">Dokumen Cetak Lokal</p>
-                  <p className="text-3xs text-slate-400">Sistem Pembuat Berkas Mandiri & Instan</p>
-                </div>
-                <p className="whitespace-pre-wrap leading-relaxed text-slate-600">{pdfTeks}</p>
-              </div>
-              <div className="text-right pt-6">
-                <p className="text-3xs font-semibold">Petugas Administrasi,</p>
-                <br/><br/>
-                <p>( _______________________ )</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* C. PDF TO JPG & TEXT EXTRACTOR & COMPRESSOR */}
+      {/* ========================================================================= */}
+      {/* 2. TOOLS: PDF TO JPG, KOMPRES PDF, EKSTRAK PDF */}
+      {/* ========================================================================= */}
       {(toolId === 'kompres-pdf' || toolId === 'pdf-to-jpg' || toolId === 'ekstrak-pdf') && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-6">
+        <div className="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="font-bold text-slate-800 dark:text-slate-200">
-                {toolId === 'kompres-pdf' ? 'Kompresor PDF Target 200KB/500KB' : toolId === 'pdf-to-jpg' ? 'Konversi PDF ke Gambar JPG' : 'Pengekstrak Teks & Gambar PDF'}
+              <h3 className="font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-base">
+                <FileArchive className="w-5 h-5 text-sky-600" />
+                {toolId === 'kompres-pdf' ? 'Kompresor Berkas PDF (Target 200KB / 500KB)' : 
+                 toolId === 'pdf-to-jpg' ? 'Konverter PDF ke Gambar JPG Tiap Halaman' : 
+                 'Pengekstrak Teks Asli dari Dokumen PDF'}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">Unggah berkas PDF dari HP untuk diolah secara aman dan cepat.</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Pilih dokumen PDF asli dari memori perangkat untuk diproses dengan cepat.
+              </p>
             </div>
             
-            <label className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow">
-              <FileDown className="w-4 h-4" /> Pilih Berkas PDF
-              <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileUpload} />
-            </label>
+            <button 
+              onClick={() => singlePdfInputRef.current?.click()}
+              className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
+            >
+              <FileDown className="w-4 h-4" /> {pdfFile ? 'Ganti Berkas PDF' : 'Pilih Berkas PDF Asli'}
+            </button>
+            <input ref={singlePdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleSinglePdfUpload} />
           </div>
 
           {pdfFile && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/80">
-              <div className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border">
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm block">Informasi Berkas PDF</span>
-                
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100">
-                    <span className="text-slate-400 block text-3xs font-bold">NAMA BERKAS</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 block truncate mt-0.5">{pdfFile.name}</span>
-                  </div>
-                  <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100">
-                    <span className="text-slate-400 block text-3xs font-bold">UKURAN BERKAS</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">{(pdfFile.size / 1024).toFixed(1)} KB</span>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+              {/* SIDE CONTROLS */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <span className="font-extrabold text-xs text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
+                    Informasi Dokumen
+                  </span>
 
-                {toolId === 'kompres-pdf' && (
-                  <div className="space-y-4 pt-2">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500">PILIH TARGET UKURAN MAKSIMAL</label>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white dark:bg-slate-850 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-3xs text-slate-400 block font-bold">NAMA BERKAS</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block truncate mt-0.5">{pdfFile.name}</span>
+                    </div>
+                    <div className="bg-white dark:bg-slate-850 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-3xs text-slate-400 block font-bold">UKURAN ASLI</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block mt-0.5">{(pdfFile.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                  </div>
+
+                  {/* KOMPRES PDF ACTION */}
+                  {toolId === 'kompres-pdf' && (
+                    <div className="space-y-3 pt-2">
+                      <label className="text-3xs font-black text-slate-400 uppercase">PILIH TARGET UKURAN MAKSIMAL</label>
                       <div className="grid grid-cols-2 gap-2">
                         <button 
-                          onClick={() => setTargetSize('200kb')}
-                          className={`py-2 text-xs font-bold rounded-xl border transition-all ${targetSize === '200kb' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}
+                          onClick={() => { setTargetSize('200kb'); setCompressedPdfBlobUrl(null); }}
+                          className={`py-2.5 text-xs font-bold rounded-xl border cursor-pointer transition-all ${targetSize === '200kb' ? 'bg-sky-600 border-sky-600 text-white shadow-xs' : 'bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
                         >
-                          Target 200 KB (Pas CPNS)
+                          Target ≤ 200 KB (CPNS)
                         </button>
                         <button 
-                          onClick={() => setTargetSize('500kb')}
-                          className={`py-2 text-xs font-bold rounded-xl border transition-all ${targetSize === '500kb' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}
+                          onClick={() => { setTargetSize('500kb'); setCompressedPdfBlobUrl(null); }}
+                          className={`py-2.5 text-xs font-bold rounded-xl border cursor-pointer transition-all ${targetSize === '500kb' ? 'bg-sky-600 border-sky-600 text-white shadow-xs' : 'bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
                         >
-                          Target 500 KB (Pas Kerja)
+                          Target ≤ 500 KB (Lamaran)
                         </button>
                       </div>
-                    </div>
 
-                    <button 
-                      onClick={() => handleSimulatedDownload(`${pdfFile.name.replace('.pdf', '')}_compressed_${targetSize}.pdf`)}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow"
-                    >
-                      <FileArchive className="w-4 h-4" /> Mulai Kompresi Presisi
-                    </button>
-                  </div>
-                )}
+                      <button 
+                        onClick={handlePerformRealCompression}
+                        disabled={isCompressing}
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
+                      >
+                        <FileArchive className="w-4 h-4" />
+                        {isCompressing ? 'Sedang Mengompresi Halaman...' : 'Mulai Kompresi Dokumen Sekarang'}
+                      </button>
 
-                {toolId === 'pdf-to-jpg' && (
-                  <div className="space-y-3 pt-2">
-                    <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl border border-emerald-100 text-xs">
-                      Sistem mendeteksi berkas PDF Anda terdiri dari <strong>{pdfPagesCount} Halaman</strong>. Tiap halaman akan dikonversi menjadi gambar beresolusi tinggi (HQ) secara terpisah.
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 max-h-[120px] overflow-y-auto pr-1">
-                      {Array.from({ length: pdfPagesCount }).map((_, idx) => (
-                        <div key={idx} className="bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 flex items-center justify-between text-2xs">
-                          <span className="font-semibold text-slate-600 dark:text-slate-400">Halaman {idx + 1}.jpg</span>
+                      {compressedSize && (
+                        <div className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs space-y-2">
+                          <div className="flex justify-between items-center text-emerald-900 dark:text-emerald-200">
+                            <span>Ukuran Berhasil Dikecilkan:</span>
+                            <strong>{(compressedSize / 1024).toFixed(1)} KB</strong>
+                          </div>
                           <button 
-                            onClick={() => handleDownloadPdfPageAsJpg(idx)}
-                            className="p-1.5 bg-blue-50 text-blue-600 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/40 rounded transition-colors cursor-pointer"
-                            title="Unduh Halaman Sebagai JPG Resolusi Tinggi"
+                            onClick={downloadCompressedPdf}
+                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                           >
-                            <Download className="w-3.5 h-3.5" />
+                            <Download className="w-3.5 h-3.5" /> Unduh Berkas PDF Kompresi
                           </button>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {toolId === 'ekstrak-pdf' && (
-                  <div className="space-y-4 pt-2">
-                    <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl border border-emerald-100 text-xs">
-                      Berhasil mengekstrak teks ketikan dan elemen gambar dari PDF! Anda dapat menyalin teks tersebut di bawah ini.
+                  {/* PDF TO JPG ACTION */}
+                  {toolId === 'pdf-to-jpg' && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-3xs font-bold text-slate-500">Ditemukan {pdfPagesCount} Halaman</span>
+                        <button 
+                          onClick={handleDownloadAllPagesAsJpg}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-3xs rounded-lg flex items-center gap-1 cursor-pointer"
+                        >
+                          <Download className="w-3 h-3" /> Unduh Semua Lembar JPG
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                        {Array.from({ length: pdfPagesCount }).map((_, idx) => (
+                          <div key={idx} className="bg-white dark:bg-slate-850 p-2 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-3xs">
+                            <span className="font-bold text-slate-700 dark:text-slate-300">Hal #{idx + 1}</span>
+                            <button 
+                              onClick={() => handleDownloadPdfPageAsJpg(idx)}
+                              className="px-2 py-1 bg-sky-50 dark:bg-sky-950/30 text-sky-600 hover:bg-sky-100 rounded font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Download className="w-3 h-3" /> JPG
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  )}
 
-                    <div className="space-y-1">
-                      <label className="text-2xs font-bold text-slate-400 uppercase">TEKS DI EKSTRAK</label>
+                  {/* EKSTRAK PDF ACTION */}
+                  {toolId === 'ekstrak-pdf' && (
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-3xs font-black text-slate-400 uppercase">TEKS HASIL EKSTRAKSI</label>
+                        <CopyButton textToCopy={extractedText} label="Salin Teks" />
+                      </div>
                       <textarea 
-                        rows={6} 
-                        readOnly 
+                        rows={8}
                         value={extractedText}
-                        className="w-full text-2xs p-2 bg-white dark:bg-slate-900 border rounded-lg resize-y outline-none" 
+                        readOnly
+                        className="w-full text-xs p-3 bg-white dark:bg-slate-900 border rounded-xl font-mono resize-none leading-relaxed"
                       />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* PDF VISUAL PAGE PREVIEW */}
-              <div className="flex justify-center items-center bg-slate-900 rounded-3xl p-6 min-h-[300px]">
+              {/* RIGHT PREVIEW CANVAS VIEW */}
+              <div className="lg:col-span-7 bg-slate-900 rounded-3xl p-5 border border-slate-800 flex flex-col items-center justify-center min-h-[380px]">
                 {isProcessingPdf ? (
-                  <div className="text-center text-xs text-slate-400 space-y-2">
-                    <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p>Memproses berkas PDF secara lokal...</p>
+                  <div className="text-center text-xs text-sky-400 space-y-3">
+                    <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="font-bold">Membaca dan merender halaman PDF...</p>
                   </div>
                 ) : pdfDataUriList.length > 0 ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <img src={pdfDataUriList[0]} className="max-w-full max-h-[260px] object-contain rounded-lg shadow-2xl border border-slate-700" alt="Halaman 1 Preview" />
-                    <span className="text-[10px] text-slate-400 font-bold">Halaman 1 dari {pdfPagesCount}</span>
+                  <div className="w-full space-y-3">
+                    <div className="flex items-center justify-between text-xs text-slate-400 px-2">
+                      <span>Pratinjau Halaman 1 dari {pdfPagesCount}</span>
+                      <button 
+                        onClick={() => handleDownloadPdfPageAsJpg(0)}
+                        className="text-sky-400 hover:underline font-bold text-3xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" /> Unduh Lembar 1 (.JPG)
+                      </button>
+                    </div>
+                    <div className="max-h-[360px] overflow-y-auto flex justify-center bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                      <img src={pdfDataUriList[0]} alt="Halaman 1" className="max-h-[330px] w-auto rounded-lg shadow-xl" />
+                    </div>
                   </div>
                 ) : (
-                  <div className="bg-white p-6 rounded shadow-xl w-48 h-64 flex flex-col justify-between border-t-4 border-rose-500 animate-pulse text-center">
-                    <div className="border-b pb-2">
-                      <p className="font-bold text-slate-800 text-xs">PDF PREVIEW</p>
-                      <p className="text-slate-400 text-3xs">Page 1 of {pdfPagesCount || 1}</p>
-                    </div>
-                    <div className="space-y-1.5 flex-grow pt-4">
-                      <div className="h-2 bg-slate-100 rounded w-full" />
-                      <div className="h-2 bg-slate-100 rounded w-5/6" />
-                      <div className="h-2 bg-slate-100 rounded w-4/5" />
-                    </div>
-                    <div className="h-6 bg-slate-200 rounded flex items-center justify-center text-slate-400 text-3xs">
-                      Secure PDF Document
-                    </div>
+                  <div className="text-center text-slate-500 text-xs">
+                    Pilih berkas PDF untuk menampilkan pratinjau
                   </div>
                 )}
               </div>
@@ -650,84 +814,210 @@ export default function PdfTools({ toolId }: PdfToolsProps) {
           )}
 
           {!pdfFile && (
-            <div className="py-12 text-center border-2 border-dashed border-slate-150 dark:border-slate-750 rounded-2xl mt-4 bg-slate-50/50 dark:bg-slate-800/10">
-              <FileArchive className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2 animate-bounce" />
-              <p className="text-xs text-slate-500 font-semibold">Sila unggah berkas PDF yang ingin diolah</p>
-              <p className="text-3xs text-slate-400 mt-0.5">Maksimal ukuran berkas 20MB</p>
+            <div 
+              onClick={() => singlePdfInputRef.current?.click()}
+              className="py-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 cursor-pointer hover:bg-sky-50/20 transition-all"
+            >
+              <FileArchive className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Pilih Berkas PDF Asli Anda</p>
+              <p className="text-3xs text-slate-400 mt-0.5">Mendukung berkas resmi maksimal 50 MB</p>
             </div>
           )}
         </div>
       )}
 
-      {/* D. PDF MERGER & SPLITTER */}
+      {/* ========================================================================= */}
+      {/* 3. TOOL: PDF MERGER */}
+      {/* ========================================================================= */}
       {toolId === 'pdf-merger' && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="font-bold text-slate-800 dark:text-slate-200">Penggabung Berkas PDF</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Unggah beberapa file PDF sekaligus, atur urutan file, dan gabungkan menjadi satu berkas secara instan.</p>
+              <h3 className="font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-base">
+                <Columns className="w-5 h-5 text-sky-600" />
+                Penggabung Beberapa Berkas PDF (PDF Merger)
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Unggah beberapa berkas PDF sekaligus, atur urutannya, dan gabungkan menjadi 1 file PDF utuh secara instan.
+              </p>
             </div>
 
             <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2"
+              onClick={() => mergeFileInputRef.current?.click()}
+              className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
             >
-              <Plus className="w-4 h-4" /> Upload File PDF
+              <Plus className="w-4 h-4" /> Tambah Berkas PDF
             </button>
-            <input ref={fileInputRef} type="file" multiple accept="application/pdf" className="hidden" onChange={handleFileUpload} />
+            <input ref={mergeFileInputRef} type="file" multiple accept="application/pdf" className="hidden" onChange={handleMergeFilesUpload} />
           </div>
 
-          {pdfList.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 pt-6 border-t border-slate-100 dark:border-slate-700/80">
-              {/* SIDE PROCESS CONTROLLER */}
-              <div className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100">
-                <span className="text-xs font-bold text-slate-600 block uppercase tracking-wider">Setelan Gabung</span>
-                <div className="text-xs bg-white dark:bg-slate-800 p-3 rounded-lg space-y-1.5 border">
-                  <p className="font-semibold text-slate-500">Total File: <strong className="text-slate-800 dark:text-slate-200">{pdfList.length} Berkas</strong></p>
-                  <p className="text-slate-400">Total Estimasi Halaman: <strong>{pdfList.reduce((acc, p) => acc + p.pages, 0)} Lembar</strong></p>
+          {pdfMergeList.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+              {/* SIDEBAR */}
+              <div className="lg:col-span-4 space-y-4 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
+                  Ringkasan Gabung
+                </span>
+                
+                <div className="text-xs bg-white dark:bg-slate-850 p-3.5 rounded-xl space-y-2 border border-slate-200 dark:border-slate-800">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Berkas:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">{pdfMergeList.length} File PDF</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Ukuran:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">
+                      {(pdfMergeList.reduce((acc, p) => acc + p.size, 0) / 1024).toFixed(1)} KB
+                    </strong>
+                  </div>
                 </div>
 
                 <button 
-                  onClick={() => handleSimulatedDownload('pdf_gabungan.pdf')}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow"
+                  onClick={handlePerformMerge}
+                  disabled={isMerging}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
                 >
-                  <Columns className="w-4 h-4" /> Mulai Gabungkan PDF
+                  <Columns className="w-4 h-4" />
+                  {isMerging ? 'Sedang Menggabungkan PDF...' : 'Gabungkan & Unduh PDF'}
                 </button>
               </div>
 
               {/* LIST PDF */}
-              <div className="md:col-span-3 space-y-3 max-h-[350px] overflow-y-auto pr-2">
-                {pdfList.map((pdf, idx) => (
-                  <div key={pdf.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3.5 rounded-xl flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3 w-2/3">
-                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400 flex items-center justify-center font-bold text-2xs shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div className="truncate">
-                        <p className="font-semibold text-slate-700 dark:text-slate-300 truncate">{pdf.name}</p>
-                        <p className="text-3xs text-slate-400 mt-0.5">Jumlah Halaman: {pdf.pages} hal | Ukuran: {(pdf.size / 1024).toFixed(1)} KB</p>
-                      </div>
+              <div className="lg:col-span-8 space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                {pdfMergeList.map((pdf, idx) => (
+                  <div key={pdf.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                    <span className="w-6 h-6 rounded-full bg-sky-600 text-white font-bold text-3xs flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{pdf.name}</p>
+                      <p className="text-3xs text-slate-400 mt-0.5">{(pdf.size / 1024).toFixed(1)} KB • Urutan #{idx + 1}</p>
                     </div>
-
-                    <button 
-                      onClick={() => removePdf(pdf.id)}
-                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button 
+                        onClick={() => moveMergePdf(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                        title="Pindah ke Atas"
+                      >
+                        <MoveUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => moveMergePdf(idx, 'down')}
+                        disabled={idx === pdfMergeList.length - 1}
+                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                        title="Pindah ke Bawah"
+                      >
+                        <MoveDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => removeMergePdf(pdf.id)}
+                        className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center border-2 border-dashed border-slate-150 dark:border-slate-750 rounded-2xl bg-slate-50/50 dark:bg-slate-800/10">
-              <Columns className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-              <p className="text-xs text-slate-500 font-semibold">Belum ada file PDF yang diunggah</p>
-              <p className="text-3xs text-slate-400 mt-0.5">Harap unggah minimal 2 berkas PDF untuk digabungkan</p>
+            <div 
+              onClick={() => mergeFileInputRef.current?.click()}
+              className="py-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 cursor-pointer hover:bg-sky-50/20 transition-all"
+            >
+              <Columns className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Pilih Minimal 2 File PDF</p>
+              <p className="text-3xs text-slate-400 mt-0.5">Klik di sini untuk mengunggah berkas PDF dari memori</p>
             </div>
           )}
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* 4. TOOL: TEXT TO PDF */}
+      {/* ========================================================================= */}
+      {toolId === 'text-to-pdf' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-6 space-y-4">
+            <div className="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">Editor Draf Berkas PDF</span>
+                
+                <button 
+                  onClick={() => docUploadInputRef.current?.click()}
+                  className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/30 text-sky-600 font-bold text-3xs rounded-lg border border-sky-200 dark:border-sky-800 cursor-pointer flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Unggah File Teks (.txt)
+                </button>
+                <input 
+                  ref={docUploadInputRef} 
+                  type="file" 
+                  accept=".txt,.doc" 
+                  className="hidden" 
+                  onChange={handleDocForTextUpload} 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-3xs font-black text-slate-400 uppercase">JUDUL DOKUMEN</label>
+                <input 
+                  type="text" 
+                  value={textToPdfTitle} 
+                  onChange={(e) => setTextToPdfTitle(e.target.value)} 
+                  className="w-full text-xs px-3 py-2 border rounded-xl dark:bg-slate-900 border-slate-300 dark:border-slate-700 font-bold" 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-3xs font-black text-slate-400 uppercase">ISI TEKS DOKUMEN</label>
+                <textarea 
+                  rows={8} 
+                  value={textToPdfBody} 
+                  onChange={(e) => setTextToPdfBody(e.target.value)} 
+                  className="w-full text-xs p-3 border rounded-xl dark:bg-slate-900 border-slate-300 dark:border-slate-700 font-serif resize-none leading-relaxed" 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-3xs font-black text-slate-400 uppercase">BLOK TANDA TANGAN</label>
+                <textarea 
+                  rows={3} 
+                  value={textToPdfSigner} 
+                  onChange={(e) => setTextToPdfSigner(e.target.value)} 
+                  className="w-full text-xs p-3 border rounded-xl dark:bg-slate-900 border-slate-300 dark:border-slate-700 font-serif resize-none" 
+                />
+              </div>
+
+              <button 
+                onClick={handleGenerateTextPdf}
+                disabled={isGeneratingTextPdf}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
+              >
+                <FilePlus className="w-4 h-4" />
+                {isGeneratingTextPdf ? 'Membuat File PDF...' : 'Cetak & Unduh File PDF Asli'}
+              </button>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-inner flex flex-col justify-center min-h-[420px]">
+            <div className="bg-white text-slate-900 p-8 rounded-xl shadow-2xl w-full text-xs font-serif min-h-[350px] flex flex-col justify-between border-t-8 border-sky-600">
+              <div className="space-y-4">
+                <div className="text-center border-b pb-3 space-y-1">
+                  <p className="font-bold text-sm tracking-wider">REPUBLIK INDONESIA</p>
+                  <p className="font-bold text-xs uppercase text-slate-700">{textToPdfTitle}</p>
+                </div>
+                <p className="whitespace-pre-wrap leading-relaxed text-slate-700">{textToPdfBody}</p>
+              </div>
+              <div className="text-right pt-6 pr-4">
+                <p className="whitespace-pre-wrap font-bold text-slate-800">{textToPdfSigner}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
